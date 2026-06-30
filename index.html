@@ -1,0 +1,3430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monthly Employee Rotation Scheduler</title>
+<style>
+/* =====================================================================
+   THEME VARIABLES
+   ===================================================================== */
+:root {
+  --bg: #f3f5f9;
+  --bg-card: #ffffff;
+  --bg-header: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-hover: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --accent: #ec4899;
+
+  /* ===== Shift palette — updates per the reference image ===== */
+  /* Green family */
+  --shift-ap-pb: #00b050;   /* vivid green — AP-PB */
+  --shift-trng:  #00b050;   /* training → green per spec */
+
+  /* Blue family */
+  --shift-eu-p:  #4f86f7;   /* blue — EU-P */
+  --shift-eu-b:  #1f4ed8;   /* dark blue — EU-B */
+  --shift-vl:    #bcd9ff;   /* light blue — VL */
+
+  /* Orange family */
+  --shift-na-p:  #ff8c2a;   /* orange — NA-P */
+  --shift-na-b:  #d2691e;   /* dark orange — NA-B */
+
+  /* Red family — kept for AP-B */
+  --shift-ap-b:  #c00000;   /* deep red — AP-B */
+
+  /* Neutral cells */
+  --shift-oh:    #ffffff;   /* white — OH */
+  --shift-rto:   #ffffff;   /* white — RTO */
+  --shift-off:   #b0b0b0;   /* gray — OFF */
+  --shift-ap-p:  #00b050;   /* AP-P → green (working) */
+
+  /* Cell tints for Monthly Shift Assignment counts (light mode) */
+  --tint-green:   rgba(0, 176, 80, 0.16);
+  --tint-yellow:  rgba(176, 176, 176, 0.22);
+  --tint-red:     rgba(192, 0, 0, 0.14);
+  --tint-cyan:    rgba(79, 134, 247, 0.16);
+  --tint-purple:  rgba(168, 85, 247, 0.16);
+
+  --text-on-green:  #065f2e;
+  --text-on-yellow: #4a4a4a;
+  --text-on-red:    #991b1b;
+  --text-on-cyan:   #1e3a8a;
+  --text-on-purple: #6b21a8;
+
+  /* ===== Light mode highlight tokens ===== */
+  --hl-focus:        #1d4ed8;
+  --hl-focus-ring:   rgba(29, 78, 216, 0.25);
+  --hl-hover:        rgba(29, 78, 216, 0.10);
+  --hl-selected:     rgba(29, 78, 216, 0.18);
+  --hl-active:       rgba(29, 78, 216, 0.22);
+  --hl-active-ring:  rgba(29, 78, 216, 0.35);
+  --hl-glow:         0 0 0 3px rgba(29, 78, 216, 0.20);
+}
+
+[data-theme="dark"] {
+  --bg: #0b1220;
+  --bg-card: #131c2e;
+  --bg-header: linear-gradient(135deg, #1e1b4b 0%, #581c87 50%, #831843 100%);
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border: #1e293b;
+  --border-strong: #334155;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+
+  /* In dark mode the white cells become slate so they stay visible */
+  --shift-oh:    #1e293b;
+  --shift-rto:   #1e293b;
+  --shift-oh-text: #e2e8f0;
+  --shift-rto-text: #e2e8f0;
+
+  --tint-green:   rgba(0, 176, 80, 0.28);
+  --tint-yellow:  rgba(176, 176, 176, 0.20);
+  --tint-red:     rgba(192, 0, 0, 0.25);
+  --tint-cyan:    rgba(79, 134, 247, 0.28);
+  --tint-purple:  rgba(168, 85, 247, 0.25);
+
+  --text-on-green:  #6ee7b7;
+  --text-on-yellow: #cbd5e1;
+  --text-on-red:    #fca5a5;
+  --text-on-cyan:   #93c5fd;
+  --text-on-purple: #d8b4fe;
+
+  /* Dark mode highlight tokens — lighter, brighter */
+  --hl-focus:        #a5b4fc;
+  --hl-focus-ring:   rgba(165, 180, 252, 0.35);
+  --hl-hover:        rgba(165, 180, 252, 0.16);
+  --hl-selected:     rgba(165, 180, 252, 0.26);
+  --hl-active:       rgba(165, 180, 252, 0.32);
+  --hl-active-ring:  rgba(165, 180, 252, 0.40);
+  --hl-glow:         0 0 0 3px rgba(165, 180, 252, 0.30);
+}
+
+/* Keep text contrast on the white-ish cells */
+.shift-oh, .shift-rto { color: var(--shift-oh-text, #0f172a); }
+
+/* =====================================================================
+   BASE
+   ===================================================================== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+select, input {
+  font-family: inherit;
+  color: inherit;
+}
+
+a { color: var(--primary); }
+
+/* =====================================================================
+   HEADER
+   ===================================================================== */
+.app-header {
+  background: var(--bg-header);
+  color: white;
+  padding: 24px 32px;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-title .logo {
+  width: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  backdrop-filter: blur(8px);
+}
+
+.app-title small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.btn-primary:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+
+.btn-ghost {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.15); }
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.85);
+  color: white;
+  border: 1px solid rgba(239, 68, 68, 0.9);
+}
+.btn-danger:hover { background: rgba(220, 38, 38, 0.95); transform: translateY(-1px); }
+
+.btn-solid {
+  background: var(--primary);
+  color: white;
+}
+.btn-solid:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+.btn-outline {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { border-color: var(--hl-focus); transform: translateY(-1px); }
+
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.18s ease;
+}
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.3); transform: rotate(20deg); }
+
+/* =====================================================================
+   LAYOUT
+   ===================================================================== */
+.app-main {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 32px 64px;
+}
+
+/* =====================================================================
+   CONTROLS PANEL
+   ===================================================================== */
+.controls-panel {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.control-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.control-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.control-select, .control-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.control-select:hover, .control-input:hover {
+  border-color: var(--hl-focus);
+  background: var(--bg-card);
+}
+.control-select:focus, .control-input:focus {
+  border-color: var(--hl-focus);
+  box-shadow: var(--hl-glow);
+  background: var(--bg-card);
+}
+
+.filter-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-chip:hover { border-color: var(--hl-focus); background: var(--hl-hover); }
+.filter-chip.active {
+  background: var(--hl-focus);
+  color: white;
+  border-color: var(--hl-focus);
+  box-shadow: var(--hl-glow);
+}
+
+/* =====================================================================
+   DASHBOARD
+   ===================================================================== */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.dash-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.dash-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+
+.dash-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+  background: var(--card-accent, var(--primary));
+}
+
+.dash-card .label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.dash-card .value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.dash-card .sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.dash-card .icon {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 22px;
+  opacity: 0.55;
+}
+
+/* =====================================================================
+   SECTION
+   ===================================================================== */
+.section {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 22px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.section-title .hint { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+
+/* =====================================================================
+   QUICK APPLY (Rotation Pattern Quick Apply)
+   ===================================================================== */
+.quick-apply-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+}
+
+.quick-apply-row .label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 4px;
+}
+
+.quick-apply-row select {
+  flex: 1 1 160px;
+  min-width: 160px;
+}
+
+.qa-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+}
+
+.qa-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+
+/* =====================================================================
+   MONTHLY ASSIGNMENTS PANEL
+   ===================================================================== */
+.coverage-banner {
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.coverage-banner.ok {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #059669;
+}
+.coverage-banner.warn {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #d97706;
+}
+.coverage-banner .chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+}
+
+.monthly-assignments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.assignment-card {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+  position: relative;
+}
+.assignment-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: var(--hl-focus);
+}
+
+/* Highlight the card for the employee currently selected in the filter */
+.assignment-card.is-active {
+  border-color: var(--hl-focus);
+  background: var(--hl-active);
+  box-shadow: 0 0 0 3px var(--hl-active-ring), var(--shadow);
+}
+
+.assignment-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: white;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.assignment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.assignment-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assignment-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.assignment-shift {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+}
+
+.assignment-shift.secondary {
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.92;
+  letter-spacing: 0.02em;
+}
+
+.assignment-time {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.assignment-time.also {
+  font-style: italic;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+/* =====================================================================
+   SCHEDULE TABLE
+   ===================================================================== */
+.table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  position: relative;
+  max-height: 70vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  min-width: 980px;
+  font-size: 13px;
+}
+
+.schedule-table thead th {
+  background: var(--bg);
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 2px solid var(--border-strong);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  white-space: nowrap;
+}
+
+.schedule-table thead th.sticky-col { left: 0; z-index: 7; }
+
+.schedule-table thead .monthly-shift-header {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 6px;
+  color: white;
+  border-radius: 6px;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.schedule-table tbody td {
+  padding: 0;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  vertical-align: middle;
+  height: 42px;
+  position: relative;
+}
+
+.schedule-table tbody tr:hover td { background: var(--hl-hover); }
+
+.schedule-table tbody td.sticky-col {
+  background: var(--bg-card);
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  font-weight: 600;
+  padding: 8px 10px;
+  text-align: left;
+  border-right: 2px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.schedule-table tbody td.sticky-col-2 {
+  position: sticky;
+  left: 60px;
+  z-index: 3;
+  background: var(--bg-card);
+  border-right: 2px solid var(--border-strong);
+}
+
+.schedule-table tbody td.sticky-col .date-num { font-size: 14px; font-weight: 700; }
+.schedule-table tbody td.sticky-col .date-day { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+
+.weekend td.sticky-col, .weekend td.sticky-col-2 { background: rgba(245, 158, 11, 0.06); }
+
+/* Hovered cells get a more visible highlight in light mode */
+.schedule-table tbody td.cell-hoverable {
+  transition: background 0.12s;
+}
+.schedule-table tbody td.cell-hoverable:hover {
+  background: var(--hl-selected);
+}
+
+.cell-select {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 8px 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  color: white;
+  outline: none;
+  transition: box-shadow 0.15s;
+}
+.cell-select:hover { filter: brightness(1.08); }
+.cell-select:focus {
+  box-shadow: inset 0 0 0 3px var(--hl-focus);
+  outline: none;
+}
+
+/* Shift color classes — exact spec values */
+.shift-ap-pb  { background: var(--shift-ap-pb);  color: white; }
+.shift-ap-b   { background: var(--shift-ap-b);   color: white; }
+.shift-eu-p   { background: var(--shift-eu-p);   color: white; }
+.shift-eu-b   { background: var(--shift-eu-b);   color: white; }
+.shift-na-p   { background: var(--shift-na-p);   color: white; }
+.shift-na-b   { background: var(--shift-na-b);   color: white; }
+.shift-na-pb  { background: var(--shift-na-pb);  color: white; }
+.shift-ap-p   { background: var(--shift-ap-p);   color: white; }
+.shift-off    { background: var(--shift-off);    color: #2a2a2a; }
+.shift-vl     { background: var(--shift-vl);     color: #1e40af; }
+.shift-el     { background: #f59e0b;             color: white; }
+.shift-sl     { background: #f59e0b;             color: white; }
+.shift-ml     { background: #f59e0b;             color: white; }
+.shift-hol    { background: #fbbf24;             color: #1f2937; }
+.shift-co     { background: #fbbf24;             color: #1f2937; }
+.shift-rto    { background: var(--shift-rto);    color: var(--shift-rto-text, #0f172a); border: 1px solid var(--border-strong); }
+.shift-trng   { background: var(--shift-trng);   color: white; }
+.shift-oh     { background: var(--shift-oh);     color: var(--shift-oh-text, #0f172a); border: 1px solid var(--border-strong); }
+.shift-empty  { background: transparent; color: var(--text-muted); }
+
+.cell-select option { background: white; color: black; padding: 4px; }
+
+/* =====================================================================
+   STATISTICS TABLE
+   ===================================================================== */
+.stats-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 13px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.stats-table th, .stats-table td {
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.stats-table thead th {
+  background: var(--bg);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats-table tbody td:first-child {
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  z-index: 2;
+}
+
+.stats-table tfoot td {
+  background: var(--bg);
+  font-weight: 700;
+}
+
+.stats-table tbody tr:hover td { background: var(--hl-hover); }
+.stats-table tbody tr:hover td:first-child { background: var(--bg); }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.badge.good { background: rgba(16, 185, 129, 0.1); color: #059669; border-color: rgba(16, 185, 129, 0.2); }
+.badge.warn { background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.2); }
+.badge.info { background: rgba(99, 102, 241, 0.1); color: var(--primary); border-color: rgba(99, 102, 241, 0.2); }
+
+/* =====================================================================
+   MONTHLY SHIFT ASSIGNMENT TABLE
+   ===================================================================== */
+.msa-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  position: relative;
+  max-height: 70vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+.msa-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  min-width: 1100px;
+  font-size: 13px;
+}
+
+.msa-table thead th {
+  background: var(--bg);
+  padding: 12px 10px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 2px solid var(--border-strong);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.msa-table thead th.col-shift,
+.msa-table thead th.col-desc {
+  text-align: left;
+}
+
+.msa-table thead th .pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: white;
+}
+
+.msa-table tbody td {
+  padding: 10px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.msa-table tbody td.col-shift,
+.msa-table tbody td.col-desc {
+  text-align: left;
+  position: sticky;
+  background: var(--bg-card);
+  z-index: 3;
+  white-space: nowrap;
+}
+
+.msa-table tbody td.col-shift {
+  left: 0;
+  min-width: 220px;
+  border-right: 2px solid var(--border-strong);
+}
+
+.msa-table tbody td.col-desc {
+  left: 220px;
+  min-width: 150px;
+  border-right: 2px solid var(--border-strong);
+}
+
+.msa-table tbody tr:hover td { background: var(--hl-hover); }
+.msa-table tbody tr:hover td.col-shift,
+.msa-table tbody tr:hover td.col-desc { background: var(--bg); }
+
+.msa-table tfoot td {
+  padding: 10px;
+  background: var(--bg);
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+  border-top: 2px solid var(--border-strong);
+  border-right: 1px solid var(--border);
+}
+.msa-table tfoot td.col-shift,
+.msa-table tfoot td.col-desc {
+  text-align: left;
+  position: sticky;
+  background: var(--bg);
+  z-index: 3;
+}
+
+.msa-cell-green   { background: var(--tint-green);  color: var(--text-on-green); }
+.msa-cell-yellow  { background: var(--tint-yellow); color: var(--text-on-yellow); }
+.msa-cell-red     { background: var(--tint-red);    color: var(--text-on-red); }
+.msa-cell-cyan    { background: var(--tint-cyan);   color: var(--text-on-cyan); }
+.msa-cell-purple  { background: var(--tint-purple); color: var(--text-on-purple); }
+.msa-cell-zero    { color: var(--text-muted); font-weight: 500; }
+
+.emp-cell { display: flex; align-items: center; gap: 10px; }
+
+.emp-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  color: white;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.emp-meta { display: flex; flex-direction: column; min-width: 0; }
+.emp-name {
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+.emp-pill {
+  font-size: 10px;
+  color: white;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-weight: 700;
+  align-self: flex-start;
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+
+.desc-shift {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  margin-right: 6px;
+}
+.desc-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* =====================================================================
+   LEGEND
+   ===================================================================== */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+}
+.legend-swatch {
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  display: inline-block;
+}
+.legend-time {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* =====================================================================
+   TOAST
+   ===================================================================== */
+.toast-container {
+  position: fixed;
+  top: 90px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-hover);
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 220px;
+  animation: slideIn 0.25s ease;
+  max-width: 320px;
+}
+.toast.success { border-left-color: #10b981; }
+.toast.warn { border-left-color: #f59e0b; }
+.toast.error { border-left-color: #ef4444; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* =====================================================================
+   MODAL
+   ===================================================================== */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; animation: fadeIn 0.18s ease; }
+.modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  animation: scaleIn 0.2s ease;
+}
+.modal h3 { font-size: 16px; margin-bottom: 12px; }
+.modal .modal-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.modal-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.modal-btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+.modal-btn.danger { background: #ef4444; color: white; border-color: #ef4444; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+/* =====================================================================
+   PRINT
+   ===================================================================== */
+@media print {
+  .app-header, .controls-panel, .dashboard, .legend-section, .no-print,
+  .quick-apply-row { display: none !important; }
+  body { background: white; color: black; }
+  .section { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+  .table-wrap { max-height: none; overflow: visible; border: none; }
+  .schedule-table { min-width: auto; font-size: 10px; }
+  .schedule-table th, .schedule-table td { padding: 4px; height: auto; }
+}
+
+/* =====================================================================
+   RESPONSIVE
+   ===================================================================== */
+@media (max-width: 1024px) {
+  .schedule-table { min-width: 880px; }
+  .msa-table { min-width: 980px; }
+}
+
+@media (max-width: 900px) {
+  .app-main { padding: 16px; }
+  .app-header { padding: 18px 16px; }
+  .header-inner { gap: 12px; }
+  .app-title { font-size: 18px; }
+  .section { padding: 16px; }
+  .dash-card .value { font-size: 22px; }
+  .monthly-assignments { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .controls-panel { gap: 10px; }
+}
+
+@media (max-width: 768px) {
+  .monthly-assignments { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .section-title { font-size: 15px; }
+  .schedule-table tbody td.sticky-col { left: 0; }
+  .schedule-table tbody td.sticky-col-2 { left: 56px; }
+}
+
+@media (max-width: 600px) {
+  .app-title small { display: none; }
+  .controls-panel { flex-direction: column; align-items: stretch; }
+  .control-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .control-select, .control-input { flex: 1 1 100%; min-width: 0; }
+  .filter-chip { flex: 1 1 auto; text-align: center; }
+  .monthly-assignments { grid-template-columns: 1fr; }
+  .quick-apply-row { flex-direction: column; align-items: stretch; }
+  .quick-apply-row select { width: 100%; }
+  .qa-meta { text-align: center; }
+  .table-wrap { max-height: 60vh; }
+  .app-header { padding: 14px 12px; }
+  .app-title { font-size: 16px; }
+  .header-actions .btn { font-size: 12px; padding: 7px 12px; }
+  .assignment-card { padding: 12px; }
+  .assignment-avatar { width: 38px; height: 38px; font-size: 13px; }
+}
+
+@media (max-width: 420px) {
+  .monthly-assignments { gap: 10px; }
+  .stats-table, .msa-table { font-size: 12px; }
+}
+
+/* =====================================================================
+   ANIMATIONS
+   ===================================================================== */
+.fade-in { animation: fadeIn 0.3s ease; }
+.pulse { animation: pulse 0.4s ease; }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.04); }
+}
+
+.row-flash {
+  animation: rowFlash 0.6s ease;
+}
+@keyframes rowFlash {
+  0%   { background: var(--hl-selected); }
+  100% { background: transparent; }
+}
+
+/* =====================================================================
+   SCROLLBAR
+   ===================================================================== */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* =====================================================================
+   ACCESSIBILITY
+   ===================================================================== */
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--hl-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     HEADER
+     ================================================================ -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="app-title">
+      <div class="logo">📅</div>
+      <div>
+        Rotation Scheduler
+        <small>Monthly shift planner — auto-balances 2 OFF days per week per employee</small>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="btnGenerate" title="Generate a fresh monthly schedule (auto-distributes OFF days)">🎲 Generate Schedule</button>
+      <button class="btn btn-ghost" id="btnNextMonth" title="Advance to next month and rotate starting positions">⏭ Next Month</button>
+      <button class="btn btn-ghost" id="btnReset" title="Reset rotation memory and clear data">↺ Reset</button>
+      <button class="btn btn-danger" id="btnClearAll" title="Completely wipe schedule, employees, statistics and return to a blank state">🗑 Clear All</button>
+      <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+    </div>
+  </div>
+</header>
+
+<!-- ================================================================
+     MAIN
+     ================================================================ -->
+<main class="app-main">
+
+  <!-- Controls -->
+  <section class="controls-panel">
+    <div class="control-group">
+      <span class="control-label">Month</span>
+      <select id="monthSelect" class="control-select"></select>
+      <select id="yearSelect" class="control-select"></select>
+    </div>
+    <div class="control-group">
+      <span class="control-label">Filter</span>
+      <select id="filterEmployee" class="control-select">
+        <option value="">All Employees</option>
+      </select>
+      <select id="filterShift" class="control-select">
+        <option value="">All Shifts</option>
+      </select>
+      <button class="filter-chip" data-filter="all" id="filterAll">All</button>
+      <button class="filter-chip" data-filter="weekend">Weekend</button>
+      <button class="filter-chip" data-filter="weekday">Weekday</button>
+    </div>
+    <div class="control-group">
+      <span class="control-label">Export</span>
+      <button class="btn btn-solid" id="btnExportCSV">📊 CSV</button>
+      <button class="btn btn-solid" id="btnExportExcel" title="Export a fully-formatted .xlsx workbook with colors, borders and headers">📗 Excel</button>
+      <button class="btn btn-solid" id="btnExportPDF">📄 PDF</button>
+      <button class="btn btn-solid" id="btnPrint">🖨 Print</button>
+    </div>
+  </section>
+
+  <!-- Dashboard cards -->
+  <section class="dashboard" id="dashboard">
+    <!-- cards injected by JS -->
+  </section>
+
+  <!-- Rotation Pattern Quick Apply -->
+  <section class="section">
+    <div class="section-title">
+      <span>⚡ Rotation Pattern Quick Apply</span>
+      <span class="hint">Auto-fill an employee's month with a single shift — protects OFF / VL / EL / SL / ML / HOL / CO / OH / RTO / TRNG cells.</span>
+    </div>
+    <div class="quick-apply-row">
+      <span class="label">Employee</span>
+      <select id="qaEmployee" class="control-select"></select>
+      <span class="label">Pattern</span>
+      <select id="qaPattern" class="control-select"></select>
+      <span id="qaSwatch" class="qa-swatch">AP-P</span>
+      <button class="btn btn-solid" id="qaApply">Apply Pattern</button>
+      <button class="btn btn-outline" id="qaClearCell" title="Reset all empty cells for this employee">Reset Pattern</button>
+      <span class="qa-meta">Tip: selecting <strong>EU-P</strong> populates every empty cell with EU-P, then enforces 2 OFF days per week automatically.</span>
+    </div>
+  </section>
+
+  <!-- Monthly Assignments (cards) — READS LIVE FROM SCHEDULE -->
+  <section class="section">
+    <div class="section-title">
+      <span>👥 Monthly Shift Assignments</span>
+      <span class="hint">Each card mirrors the schedule grid — live updates as you edit cells.</span>
+    </div>
+    <div id="coverageBanner" class="coverage-banner ok">
+      <span id="coverageText">✓ All primary shifts covered</span>
+    </div>
+    <div class="monthly-assignments" id="monthlyAssignments">
+      <!-- cards injected by JS -->
+    </div>
+  </section>
+
+  <!-- Schedule grid -->
+  <section class="section">
+    <div class="section-title">
+      <span>📋 <span id="scheduleMonthLabel">Monthly Schedule</span></span>
+      <span class="hint">Click any cell to override a single day • Auto-saved to browser storage</span>
+    </div>
+    <div class="table-wrap">
+      <table class="schedule-table" id="scheduleTable"></table>
+    </div>
+  </section>
+
+  <!-- Statistics & Workload -->
+  <section class="section">
+    <div class="section-title">
+      <span>📈 Statistics &amp; Workload Summary</span>
+      <span class="hint">Monthly totals per employee — updates live as you edit the schedule</span>
+    </div>
+    <div class="table-wrap" style="max-height:none;">
+      <table class="stats-table" id="statsTable"></table>
+    </div>
+  </section>
+
+  <!-- Monthly Shift Assignment table -->
+  <section class="section">
+    <div class="section-title">
+      <span>📊 Monthly Shift Assignment</span>
+      <span class="hint">Per-employee breakdown of every shift type for the month — synced live with the schedule</span>
+    </div>
+    <div class="msa-wrap">
+      <table class="msa-table" id="monthlyShiftTable"></table>
+    </div>
+  </section>
+
+  <!-- Legend -->
+  <section class="section legend-section">
+    <div class="section-title">
+      <span>🎨 Shift Legend</span>
+      <span class="hint"><span style="color:#00b050">●</span> Working &nbsp; <span style="color:#4f86f7">●</span> EU-P &nbsp; <span style="color:#ff8c2a">●</span> NA-P &nbsp; <span style="color:#b0b0b0">●</span> OFF</span>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+</main>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Edit modal -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Confirm</h3>
+    <p id="modalBody" style="color: var(--text-muted); font-size: 13px;"></p>
+    <div class="modal-actions">
+      <button class="modal-btn" id="modalCancel">Cancel</button>
+      <button class="modal-btn primary" id="modalConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- SheetJS (community fork with cell styling support) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+<script>
+/* =====================================================================
+   CONSTANTS & CONFIG
+   ===================================================================== */
+
+const EMPLOYEES = [
+  'Cindy Halasan',
+  'Jennyvee Gonzales',
+  'Eiron Pattaguan',
+  'Jake Beltran',
+  'Alexis Jordan Cruz',
+  'CJ Mabinis',
+  'Joshua Pitapit'
+];
+
+// Primary shifts used by the generator (one shift per employee per month).
+// The 6-slot default is exactly what the spec asks for:
+//   AP-PB (no AP-P / AP-B by default), EU-P, EU-B, NA-P, NA-B, OH
+// For headcounts that aren't a clean 6, we fall back to combined PB shifts
+// (EU-PB / NA-PB) so 24/7 coverage is preserved with fewer employees.
+const PRIMARY_SLOTS_7  = ['AP-PB', 'EU-P', 'EU-B', 'NA-P', 'NA-B', 'OH', 'NA-PB'];
+const PRIMARY_SLOTS_6  = ['AP-PB', 'EU-P', 'EU-B', 'NA-P', 'NA-B', 'OH'];
+const PRIMARY_SLOTS_5  = ['AP-PB', 'EU-P', 'EU-B', 'NA-PB',       'OH'];
+const PRIMARY_SLOTS_4  = ['AP-PB',           'EU-PB',          'NA-PB',          'OH'];
+const PRIMARY_SLOTS_3  = ['AP-PB',           'EU-PB',          'NA-PB'];
+const PRIMARY_SLOTS_2  = ['AP-PB',           'EU-PB'];
+const PRIMARY_SLOTS_1  = ['AP-PB'];
+
+// All shift codes — used in dropdowns, counts, exports and CSA
+const SHIFT_CODES = [
+  'AP-P', 'AP-B', 'AP-PB',
+  'EU-P', 'EU-B', 'EU-PB',
+  'NA-P', 'NA-B', 'NA-PB',
+  'OH', 'OFF',
+  'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
+  'RTO', 'TRNG'
+];
+
+// Shift codes considered "locked" by the rotation-pattern auto-fill.
+// Cells already containing any of these values are NEVER overwritten.
+const LOCKED_SHIFTS = new Set([
+  'OFF', 'VL', 'EL', 'SL', 'ML', 'HOL', 'CO', 'OH', 'RTO', 'TRNG'
+]);
+
+// Hours per shift
+const SHIFT_HOURS = {
+  'AP-P': 8,  'AP-B': 8,
+  'EU-P': 8,  'EU-B': 8,
+  'NA-P': 8,  'NA-B': 8,
+  'AP-PB': 8, 'EU-PB': 8, 'NA-PB': 8,
+  'OH':    8,
+  'OFF':   0, 'VL': 8, 'EL': 8, 'SL': 8, 'ML': 8, 'HOL': 8, 'CO': 8,
+  'RTO':   8, 'TRNG': 8
+};
+
+// Shift time windows (display + coverage logic)
+const SHIFT_TIMES = {
+  'AP-P':  '7 AM – 3 PM',
+  'AP-B':  '7 AM – 3 PM (Back)',
+  'EU-P':  '3 PM – 11 PM',
+  'EU-B':  '3 PM – 11 PM (Back)',
+  'NA-P':  '11 PM – 7 AM',
+  'NA-B':  '11 PM – 7 AM (Back)',
+  'AP-PB': '7 AM – 3 PM',
+  'EU-PB': '3 PM – 11 PM',
+  'NA-PB': '11 PM – 7 AM',
+  'OH':    '9 AM – 6 PM',
+  'OFF':   'Rest day',
+  'VL':    'Vacation Leave',
+  'EL':    'Emergency Leave',
+  'SL':    'Sick Leave',
+  'ML':    'Maternity Leave',
+  'HOL':   'Holiday',
+  'CO':    'Compensatory Off',
+  'RTO':   'Remote Work',
+  'TRNG':  'Training'
+};
+
+// Color bucket (used by legends / coverage / sorting)
+const SHIFT_BUCKET = {
+  'AP-P': 'morning', 'AP-B': 'morning',
+  'EU-P': 'evening', 'EU-B': 'evening',
+  'NA-P': 'night',   'NA-B': 'night',
+  'AP-PB': 'morning', 'EU-PB': 'evening', 'NA-PB': 'night',
+  'OH':    'day',
+  'OFF':   'off',
+  'VL':    'leave',  'EL':    'leave',
+  'SL':    'leave',  'ML':    'leave',
+  'HOL':   'leave',  'CO':    'leave',
+  'RTO':   'day',    'TRNG':  'day'
+};
+
+const SHIFT_COLOR_KIND = {
+  'AP-P': 'green', 'AP-B': 'red',
+  'EU-P': 'green', 'EU-B': 'red',
+  'NA-P': 'green', 'NA-B': 'red',
+  'AP-PB': 'green', 'EU-PB': 'green', 'NA-PB': 'green',
+  'OH':    'green',
+  'OFF':   'yellow',
+  'VL':    'yellow', 'EL': 'yellow', 'SL': 'yellow',
+  'ML':    'yellow', 'HOL': 'yellow', 'CO': 'yellow',
+  'RTO':   'cyan',
+  'TRNG':  'purple'
+};
+
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+];
+const MONTH_NAMES_SHORT = [
+  'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
+];
+const DAY_NAMES_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// Rotation-pattern candidates offered in the Quick-Apply dropdown.
+// Order matters — these are the working patterns the generator also uses.
+const ROTATION_PATTERNS = [
+  'AP-P','AP-B','EU-P','EU-B','NA-P','NA-B',
+  'AP-PB','EU-PB','NA-PB','OH'
+];
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+
+const STORAGE_KEY = 'rot_scheduler_state_v3';
+
+const defaultState = () => ({
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  schedule: {},
+  vl: {},
+  rotationMemory: {
+    monthCount: 0,
+    lastMonthAssignments: {},
+    cumulative: {}
+  },
+  theme: 'light'
+});
+
+let state = defaultState();
+
+let filterState = { employee: '', shift: '', mode: 'all' };
+
+/* =====================================================================
+   UTILITY HELPERS
+   ===================================================================== */
+
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+function dateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+function daysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getDayOfWeek(year, month, day) {
+  return new Date(year, month, day).getDay();   // 0 = Sun
+}
+
+function isWeekend(year, month, day) {
+  const dow = getDayOfWeek(year, month, day);
+  return dow === 0 || dow === 6;
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function getInitials(fullName) {
+  return fullName.split(/\s+/).map(s => s[0]).join('').slice(0, 2);
+}
+
+/** Fisher–Yates shuffle */
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+/** Convert #rrggbb → ARGB hex expected by Excel cell styles. */
+function argbFromHex(hex) {
+  if (!hex) return 'FFFFFFFF';
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+  return ('FF' + hex.toUpperCase());
+}
+
+/**
+ * Return the full shift breakdown for one employee over the month, sorted by
+ * count desc. Each entry is [shiftCode, dayCount].
+ * Used by the Monthly Assignments card so we can show the primary shift
+ * along with any manually-added secondary shifts.
+ */
+function getEmployeeShiftBreakdown(emp, year, month) {
+  const totalDays = daysInMonth(year, month);
+  const counts = {};
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    const row = state.schedule[key];
+    if (!row) continue;
+    const s = row[emp];
+    if (!s) continue;
+    counts[s] = (counts[s] || 0) + 1;
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+
+/** Convenience: the single most-frequent shift (kept for compatibility). */
+function getEmployeePrimaryShift(emp, year, month) {
+  const breakdown = getEmployeeShiftBreakdown(emp, year, month);
+  // Prefer the most-frequent NON-OFF / NON-LEAVE shift, falling back to OFF.
+  const working = breakdown.find(([code]) =>
+    SHIFT_BUCKET[code] !== 'off' && SHIFT_BUCKET[code] !== 'leave'
+  );
+  if (working) return working[0];
+  if (breakdown.length > 0) return breakdown[0][0];
+  return 'OFF';
+}
+
+/** Returns a per-employee map of primary-shift codes (from the schedule). */
+function computePrimaryAssignmentsFromSchedule(year, month) {
+  const out = {};
+  for (const emp of EMPLOYEES) {
+    out[emp] = getEmployeePrimaryShift(emp, year, month);
+  }
+  return out;
+}
+
+/* =====================================================================
+   TOAST UI
+   ===================================================================== */
+
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 320);
+  }, 2400);
+}
+
+/* =====================================================================
+   MODAL CONFIRM
+   ===================================================================== */
+
+function confirmModal(title, body, confirmLabel = 'Confirm', confirmStyle = 'primary') {
+  return new Promise(resolve => {
+    const m = document.getElementById('modal');
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').textContent = body;
+    const confirmBtn = document.getElementById('modalConfirm');
+    confirmBtn.textContent = confirmLabel;
+    confirmBtn.className = 'modal-btn ' + confirmStyle;
+    m.classList.add('open');
+    const cleanup = (val) => {
+      m.classList.remove('open');
+      confirmBtn.onclick = null;
+      document.getElementById('modalCancel').onclick = null;
+      resolve(val);
+    };
+    confirmBtn.onclick = () => cleanup(true);
+    document.getElementById('modalCancel').onclick  = () => cleanup(false);
+  });
+}
+
+/* =====================================================================
+   MONTHLY SHIFT ASSIGNMENT — generator
+   ===================================================================== */
+
+function primarySlotsForCount(empCount) {
+  if (empCount >= 7) return PRIMARY_SLOTS_7;
+  if (empCount === 6) return PRIMARY_SLOTS_6;
+  if (empCount === 5) return PRIMARY_SLOTS_5;
+  if (empCount === 4) return PRIMARY_SLOTS_4;
+  if (empCount === 3) return PRIMARY_SLOTS_3;
+  if (empCount === 2) return PRIMARY_SLOTS_2;
+  if (empCount === 1) return PRIMARY_SLOTS_1;
+  return [];
+}
+
+function computeMonthlyShifts(monthOffset) {
+  const empCount = EMPLOYEES.length;
+  const assignments = {};
+  const slots = primarySlotsForCount(empCount);
+
+  const empOrder = [];
+  for (let i = 0; i < empCount; i++) {
+    empOrder.push(EMPLOYEES[(i - monthOffset + empCount * 1000) % empCount]);
+  }
+
+  for (let i = 0; i < slots.length && i < empOrder.length; i++) {
+    assignments[empOrder[i]] = slots[i];
+  }
+  for (let i = slots.length; i < empOrder.length; i++) {
+    assignments[empOrder[i]] = 'OFF';
+  }
+  for (const emp of EMPLOYEES) {
+    if (!(emp in assignments)) assignments[emp] = 'OFF';
+  }
+  return assignments;
+}
+
+function buildMonthSchedule(monthlyShift, year, month) {
+  const totalDays = daysInMonth(year, month);
+  const newSchedule = {};
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    newSchedule[key] = {};
+    for (const emp of EMPLOYEES) {
+      newSchedule[key][emp] = monthlyShift[emp] || 'OFF';
+    }
+  }
+  return newSchedule;
+}
+
+function groupIntoWeeks(year, month) {
+  const totalDays = daysInMonth(year, month);
+  const weeks = [];
+  let current = [];
+  for (let d = 1; d <= totalDays; d++) {
+    current.push(d);
+    const dow = getDayOfWeek(year, month, d);
+    if (dow === 6 || d === totalDays) {
+      weeks.push(current);
+      current = [];
+    }
+  }
+  return weeks;
+}
+
+function pickTwoOFFDays(emp, week, year, month, usedWeekdays, empOFFSet, dateOFFCount) {
+  const isAdjacentToExisting = (day) => {
+    for (const existing of empOFFSet) {
+      if (Math.abs(day - existing) === 1) return true;
+    }
+    return false;
+  };
+
+  const buildCandidates = (excludeDays, firstPick) => {
+    return week
+      .filter(d => !empOFFSet.has(d) && !excludeDays.includes(d))
+      .map(d => {
+        const dow = getDayOfWeek(year, month, d);
+        const adjToExisting = isAdjacentToExisting(d);
+        return {
+          day: d,
+          dow,
+          isWeekend: dow === 0 || dow === 6,
+          weekdayPenalty: usedWeekdays.has(dow) ? 12 : 0,
+          balancePenalty: dateOFFCount[d] * 3,
+          adjacencyPenalty: adjToExisting ? 20
+                          : (firstPick != null && Math.abs(d - firstPick) === 1 ? 14 : 0)
+        };
+      });
+  };
+
+  const candidates1 = buildCandidates([], null);
+  if (candidates1.length === 0) return [];
+
+  candidates1.sort((a, b) => {
+    const sa = -a.weekdayPenalty - a.balancePenalty - a.adjacencyPenalty + (a.isWeekend ? 1 : 0);
+    const sb = -b.weekdayPenalty - b.balancePenalty - b.adjacencyPenalty + (b.isWeekend ? 1 : 0);
+    return sb - sa;
+  });
+
+  const first = candidates1[0];
+
+  const candidates2 = buildCandidates([first.day], first.day);
+  if (candidates2.length === 0) return [first.day];
+
+  candidates2.sort((a, b) => {
+    const sa = -a.weekdayPenalty - a.balancePenalty - a.adjacencyPenalty + (a.isWeekend ? 1 : 0);
+    const sb = -b.weekdayPenalty - b.balancePenalty - b.adjacencyPenalty + (b.isWeekend ? 1 : 0);
+    return sb - sa;
+  });
+
+  return [first.day, candidates2[0].day];
+}
+
+/**
+ * After applying a rotation pattern, redistribute OFF days across the
+ * employee-week to ensure ≥ 2 OFF days every week.
+ *
+ * Only converts days whose value matches `targetShift`. Locked values
+ * (OFF, VL, etc.) are never touched.
+ */
+function enforceWeeklyOFFsForEmployee(emp, year, month, targetShift) {
+  const weeks = groupIntoWeeks(year, month);
+  const totalDays = daysInMonth(year, month);
+
+  // Track all OFF days set so we can avoid adjacent picks
+  const empOFFDays = new Set();
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    if ((state.schedule[key] || {})[emp] === 'OFF') empOFFDays.add(d);
+  }
+
+  const isAdjacentToExisting = (d) => {
+    for (const existing of empOFFDays) if (Math.abs(d - existing) === 1) return true;
+    return false;
+  };
+
+  for (const week of weeks) {
+    const offInWeek = week.filter(d => (state.schedule[dateKey(year, month, d)][emp]) === 'OFF').length;
+    const need = 2 - offInWeek;
+    if (need <= 0) continue;
+
+    const candidates = week
+      .filter(d => {
+        const s = (state.schedule[dateKey(year, month, d)] || {})[emp];
+        return s === targetShift;          // only convert freshly filled cells
+      })
+      .map(d => {
+        const dow = getDayOfWeek(year, month, d);
+        return {
+          day: d,
+          score:
+              (isWeekend(year, month, d) ? 8 : 0)     // prefer weekdays (keep weekends busy)
+            - (isAdjacentToExisting(d) ? 25 : 0)       // avoid clustering
+            + (isWeekend(year, month, d) ? 0 : 3)      // tweak towards weekdays
+        };
+      });
+
+    candidates.sort((a, b) => b.score - a.score);
+
+    for (let i = 0; i < Math.min(need, candidates.length); i++) {
+      const day = candidates[i].day;
+      state.schedule[dateKey(year, month, day)][emp] = 'OFF';
+      empOFFDays.add(day);
+    }
+  }
+}
+
+/** Distribute exactly 2 OFF days per week per employee. */
+function applyWeeklyOFFs(schedule, year, month) {
+  const totalDays = daysInMonth(year, month);
+  const weeks = groupIntoWeeks(year, month);
+
+  const dateOFFCount = {};
+  for (let d = 1; d <= totalDays; d++) dateOFFCount[d] = 0;
+
+  const empWeekdayOFF = {};
+  EMPLOYEES.forEach(e => empWeekdayOFF[e] = new Set());
+
+  const empOFFDays = {};
+  EMPLOYEES.forEach(e => empOFFDays[e] = new Set());
+
+  for (const week of weeks) {
+    const empOrder = shuffleArray(EMPLOYEES);
+
+    for (const emp of empOrder) {
+      const picks = pickTwoOFFDays(
+        emp, week, year, month,
+        empWeekdayOFF[emp], empOFFDays[emp], dateOFFCount
+      );
+      for (const day of picks) {
+        if (day == null) continue;
+        const key = dateKey(year, month, day);
+        if (!schedule[key]) schedule[key] = {};
+        schedule[key][emp] = 'OFF';
+        empOFFDays[emp].add(day);
+        empWeekdayOFF[emp].add(getDayOfWeek(year, month, day));
+        dateOFFCount[day] += 1;
+      }
+    }
+  }
+}
+
+/**
+ * Generate a full schedule. Called by the "Generate Schedule" button,
+ * after a fresh state, and after a hard reset.
+ */
+function generateSchedule() {
+  const { year, month } = state;
+  const monthOffset = state.rotationMemory.monthCount;
+  const primaryShifts = computeMonthlyShifts(monthOffset);
+
+  state.schedule = buildMonthSchedule(primaryShifts, year, month);
+  applyWeeklyOFFs(state.schedule, year, month);
+
+  state.rotationMemory.monthCount += 1;
+  state.rotationMemory.lastMonthAssignments = { ...primaryShifts };
+
+  const totalDays = daysInMonth(year, month);
+  for (const emp of EMPLOYEES) {
+    const shift = primaryShifts[emp] || 'OFF';
+    const key = `${emp}|${shift}`;
+    state.rotationMemory.cumulative[key] =
+      (state.rotationMemory.cumulative[key] || 0) + totalDays;
+  }
+
+  saveSchedule();
+  render();
+  toast(`Schedule generated for ${MONTH_NAMES[month]} ${year}`);
+}
+
+/** Advance calendar to next month then generate. */
+function generateNextMonth() {
+  let m = state.month + 1;
+  let y = state.year;
+  if (m > 11) { m = 0; y += 1; }
+  state.month = m;
+  state.year = y;
+  state.vl = {};
+
+  document.getElementById('monthSelect').value = m;
+  document.getElementById('yearSelect').value = y;
+
+  generateSchedule();
+}
+
+/** Soft reset — keep the visible schedule, clear rotation memory. */
+function softReset() {
+  state.rotationMemory = defaultState().rotationMemory;
+  state.vl = {};
+  saveSchedule();
+  render();
+  toast('Rotation memory cleared', 'warn');
+}
+
+/**
+ * Apply a single shift pattern to one employee for the entire month.
+ *
+ *  Phase 1 — overwrite EVERY non-locked cell with `pattern` (including cells
+ *            that the auto-generator filled, e.g. AP-B, EU-P, …). This lets
+ *            the user truly "rotate" an employee's primary shift.
+ *  Phase 2 — enforce ≥ 2 OFF days per week (inserting OFF if necessary).
+ *
+ * Locked cells (OFF, VL, EL, SL, ML, HOL, CO, OH, RTO, TRNG) are NEVER
+ * overwritten, so manually-set leaves / remote days / training days stay.
+ */
+function applyRotationPattern(emp, pattern) {
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+  let touched = 0;
+  let preserved = 0;
+
+  // Phase 1 — overwrite everything except LOCKED cells
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    if (!state.schedule[key]) state.schedule[key] = {};
+    const current = state.schedule[key][emp];
+
+    if (current && LOCKED_SHIFTS.has(current)) {
+      preserved++;
+      continue;                                  // ← locked → keep as-is
+    }
+
+    state.schedule[key][emp] = pattern;
+    touched++;
+  }
+
+  // Phase 2 — enforce ≥ 2 OFF / week for this employee
+  enforceWeeklyOFFsForEmployee(emp, year, month, pattern);
+
+  // Sync stored primary assignments so coverage banner / dashboards stay current
+  syncPrimaryAssignments();
+
+  saveSchedule();
+  render();
+  toast(`Applied ${pattern} rotation to ${emp} (${touched} cells updated, ${preserved} locked preserved)`);
+}
+
+/** Reset the rotation pattern: wipe this employee's cells back to OFF except
+ *  locked values. The user can re-apply a new pattern afterwards. */
+function clearEmployeeRotation(emp) {
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    const current = (state.schedule[key] || {})[emp];
+    if (!current) continue;
+    if (LOCKED_SHIFTS.has(current)) continue;   // preserve locked
+    state.schedule[key][emp] = '';
+  }
+  syncPrimaryAssignments();
+  saveSchedule();
+  render();
+  toast(`Pattern cleared for ${emp}`, 'warn');
+}
+
+/** Recalculate `lastMonthAssignments` from actual schedule. */
+function syncPrimaryAssignments() {
+  state.rotationMemory.lastMonthAssignments =
+    computePrimaryAssignmentsFromSchedule(state.year, state.month);
+}
+
+/** Hard wipe. */
+function clearAll() {
+  state = defaultState();
+
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+
+  document.getElementById('monthSelect').value = state.month;
+  document.getElementById('yearSelect').value = state.year;
+
+  document.documentElement.dataset.theme = state.theme;
+  document.getElementById('themeToggle').textContent = '🌙';
+
+  const empSel   = document.getElementById('filterEmployee');
+  const shiftSel = document.getElementById('filterShift');
+  empSel.innerHTML   = '<option value="">All Employees</option>';
+  shiftSel.innerHTML = '<option value="">All Shifts</option>';
+  EMPLOYEES.forEach(e => {
+    const o = document.createElement('option'); o.value = e; o.textContent = e;
+    empSel.appendChild(o);
+  });
+  SHIFT_CODES.forEach(c => {
+    const o = document.createElement('option'); o.value = c; o.textContent = c;
+    shiftSel.appendChild(o);
+  });
+
+  populateRotationControls();
+
+  filterState = { employee: '', shift: '', mode: 'all' };
+  document.querySelectorAll('.filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === 'all');
+  });
+
+  render();
+  toast('All data cleared — scheduler reset', 'warn');
+}
+
+/* =====================================================================
+   STATISTICS
+   ===================================================================== */
+
+function emptyStats() {
+  return {
+    'AP-P': 0, 'AP-B': 0, 'AP-PB': 0,
+    'EU-P': 0, 'EU-B': 0, 'EU-PB': 0,
+    'NA-P': 0, 'NA-B': 0, 'NA-PB': 0,
+    'OH': 0, 'OFF': 0,
+    'VL': 0, 'EL': 0, 'SL': 0, 'ML': 0, 'HOL': 0, 'CO': 0,
+    'RTO': 0, 'TRNG': 0,
+    workingDays: 0, nightShifts: 0,
+    weekendShifts: 0, weekdayShifts: 0,
+    totalHours: 0, workloadPct: 0
+  };
+}
+
+function calculateStatistics() {
+  const { year, month } = state;
+  const stats = {};
+  for (const e of EMPLOYEES) stats[e] = emptyStats();
+
+  const totalDays = daysInMonth(year, month);
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    const row = state.schedule[key];
+    if (!row) continue;
+    const wkend = isWeekend(year, month, d);
+    for (const e of EMPLOYEES) {
+      const s = row[e];
+      if (!s) continue;
+      if (stats[e][s] !== undefined) stats[e][s] += 1;
+      if (s !== 'OFF') {
+        stats[e].workingDays += 1;
+        stats[e].totalHours += SHIFT_HOURS[s] || 0;
+      }
+      if (SHIFT_BUCKET[s] === 'night') stats[e].nightShifts += 1;
+      if (wkend && s !== 'OFF') stats[e].weekendShifts += 1;
+      if (!wkend && s !== 'OFF') stats[e].weekdayShifts += 1;
+    }
+  }
+  for (const e of EMPLOYEES) {
+    stats[e].workloadPct = totalDays > 0
+      ? Math.round((stats[e].workingDays / totalDays) * 100)
+      : 0;
+  }
+  return stats;
+}
+
+/* =====================================================================
+   COVERAGE
+   ===================================================================== */
+
+function checkCoverage() {
+  const { year, month } = state;
+  const firstKey = dateKey(year, month, 1);
+  const row = state.schedule[firstKey];
+  if (!row) {
+    return { ok: false, message: 'No schedule generated yet', chips: [], missing: [], covered: [] };
+  }
+
+  // Read primary assignments live from the schedule (rather than memory)
+  const primaryRow = computePrimaryAssignmentsFromSchedule(year, month);
+  const shiftCounts = {};
+  for (const emp of EMPLOYEES) {
+    const s = primaryRow[emp];
+    shiftCounts[s] = (shiftCounts[s] || 0) + 1;
+  }
+
+  const covered = [];
+  const missing = [];
+
+  if ((shiftCounts['AP-P'] || 0) > 0 || (shiftCounts['AP-PB'] || 0) > 0) {
+    if ((shiftCounts['AP-P'] || 0) > 0) covered.push({ code: 'AP-P', count: shiftCounts['AP-P'] });
+    else covered.push({ code: 'AP-PB', count: shiftCounts['AP-PB'], note: 'combined' });
+  } else if ((shiftCounts['AP-B'] || 0) > 0) {
+    covered.push({ code: 'AP-B', count: shiftCounts['AP-B'], note: 'backup' });
+  } else {
+    missing.push('AP');
+  }
+
+  const euCount = (shiftCounts['EU-P'] || 0) + (shiftCounts['EU-B'] || 0);
+  if (shiftCounts['EU-PB']) {
+    covered.push({ code: 'EU-PB', count: shiftCounts['EU-PB'], note: 'combined' });
+  } else if (euCount >= 2) {
+    if (shiftCounts['EU-P']) covered.push({ code: 'EU-P', count: shiftCounts['EU-P'] });
+    if (shiftCounts['EU-B']) covered.push({ code: 'EU-B', count: shiftCounts['EU-B'] });
+  } else {
+    missing.push('EU-P', 'EU-B');
+  }
+
+  const naCount = (shiftCounts['NA-P'] || 0) + (shiftCounts['NA-B'] || 0);
+  if (shiftCounts['NA-PB']) {
+    covered.push({ code: 'NA-PB', count: shiftCounts['NA-PB'], note: 'combined' });
+  } else if (naCount >= 2) {
+    if (shiftCounts['NA-P']) covered.push({ code: 'NA-P', count: shiftCounts['NA-P'] });
+    if (shiftCounts['NA-B']) covered.push({ code: 'NA-B', count: shiftCounts['NA-B'] });
+  } else {
+    missing.push('NA-P', 'NA-B');
+  }
+
+  if (shiftCounts['OH']) covered.push({ code: 'OH', count: shiftCounts['OH'], optional: true });
+
+  const ok = missing.length === 0;
+  return { ok, covered, missing };
+}
+
+function renderCoverageBanner() {
+  const c = checkCoverage();
+  const banner = document.getElementById('coverageBanner');
+  const text = document.getElementById('coverageText');
+  banner.className = 'coverage-banner ' + (c.ok ? 'ok' : 'warn');
+
+  if (c.ok) {
+    const chips = c.covered.map(s =>
+      `<span class="chip" style="background:${getShiftColorVar(s.code)}">${s.code}${s.note ? ' (' + s.note + ')' : ''}</span>`
+    ).join('');
+    text.innerHTML = `✓ All primary shifts covered for 24/7 operation — ${chips}`;
+  } else {
+    const missingChips = c.missing.map(s =>
+      `<span class="chip" style="background:#ef4444">${s} missing</span>`
+    ).join('');
+    text.innerHTML = `⚠ Coverage gaps — ${missingChips}`;
+  }
+}
+
+/* =====================================================================
+   COLOR HELPERS
+   ===================================================================== */
+
+function getShiftColorVar(code) {
+  const map = {
+    'AP-P':  'var(--shift-ap-p)',
+    'AP-B':  'var(--shift-ap-b)',
+    'AP-PB': 'var(--shift-ap-pb)',
+    'EU-P':  'var(--shift-eu-p)',
+    'EU-B':  'var(--shift-eu-b)',
+    'EU-PB': 'var(--shift-eu-b)',   // NA-PB has its own spec entry; render same dark-blue family
+    'NA-P':  'var(--shift-na-p)',
+    'NA-B':  'var(--shift-na-b)',
+    'NA-PB': 'var(--shift-na-p)',
+    'OH':    'var(--shift-oh)',
+    'OFF':   'var(--shift-off)',
+    'VL':    'var(--shift-vl)',
+    'EL':    'var(--shift-el)',
+    'SL':    'var(--shift-sl)',
+    'ML':    'var(--shift-ml)',
+    'HOL':   'var(--shift-hol)',
+    'CO':    'var(--shift-co)',
+    'RTO':   'var(--shift-rto)',
+    'TRNG':  'var(--shift-trng)'
+  };
+  return map[code] || 'var(--text-muted)';
+}
+
+/** Concrete hex value, used by the Excel exporter. */
+function getShiftColorHex(code) {
+  const map = {
+    'AP-P':  '#00b050',
+    'AP-B':  '#c00000',
+    'AP-PB': '#00b050',
+    'EU-P':  '#4f86f7',
+    'EU-B':  '#1f4ed8',
+    'EU-PB': '#4f86f7',
+    'NA-P':  '#ff8c2a',
+    'NA-B':  '#d2691e',
+    'NA-PB': '#ff8c2a',
+    'OH':    '#ffffff',
+    'OFF':   '#b0b0b0',
+    'VL':    '#bcd9ff',
+    'EL':    '#f59e0b',
+    'SL':    '#f59e0b',
+    'ML':    '#f59e0b',
+    'HOL':   '#fbbf24',
+    'CO':    '#fbbf24',
+    'RTO':   '#ffffff',
+    'TRNG':  '#00b050'
+  };
+  return map[code] || '#cccccc';
+}
+
+/* =====================================================================
+   UPDATE DASHBOARD
+   ===================================================================== */
+
+function updateDashboard() {
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+  const firstKey = dateKey(year, month, 1);
+  const dayOneRow = state.schedule[firstKey] || {};
+
+  // Read primary shifts directly from the schedule → live data
+  const row = computePrimaryAssignmentsFromSchedule(year, month);
+  if (!row || Object.keys(row).length === 0) {
+    document.getElementById('dashboard').innerHTML = '';
+    return;
+  }
+
+  const shiftCounts = {};
+  for (const emp of EMPLOYEES) {
+    const s = row[emp];
+    shiftCounts[s] = (shiftCounts[s] || 0) + 1;
+  }
+
+  const workingCount = EMPLOYEES.filter(e => row[e] && row[e] !== 'OFF').length;
+  const offCount = shiftCounts['OFF'] || 0;
+  const ohCount = shiftCounts['OH'] || 0;
+  const vlCount = shiftCounts['VL'] || 0;
+
+  // Daily staffing (24/7) — uses day-1 data, since that's the active day
+  const dayShift = dayOneRow;
+  let dailyStaffing = 0;
+  for (const emp of EMPLOYEES) {
+    const s = dayShift[emp];
+    if (['AP-P','AP-B','EU-P','EU-B','NA-P','NA-B','AP-PB','EU-PB','NA-PB'].includes(s)) {
+      dailyStaffing += 1;
+    }
+  }
+  const dailyWithOH = dailyStaffing + ohCount;
+
+  let totalWorkloadDays = 0;
+  let totalOffDays = 0;
+  for (let d = 1; d <= totalDays; d++) {
+    const r = state.schedule[dateKey(year, month, d)] || {};
+    for (const e of EMPLOYEES) {
+      const v = r[e];
+      if (v && v !== 'OFF') totalWorkloadDays += 1;
+      else if (v === 'OFF') totalOffDays += 1;
+    }
+  }
+  const avgWorkload = EMPLOYEES.length > 0
+    ? (totalWorkloadDays / EMPLOYEES.length).toFixed(1)
+    : 0;
+
+  const cards = [
+    { label: 'Current Month', value: MONTH_NAMES[month], sub: year, icon: '📅', color: '#4f46e5' },
+    { label: 'Daily Coverage', value: dailyStaffing, sub: `people covering 24/7${ohCount ? ' (+' + ohCount + ' OH)' : ''}`, icon: '👥', color: '#10b981' },
+    { label: 'On Shift', value: workingCount, sub: 'employees with active shifts', icon: '✅', color: '#3b82f6' },
+    { label: 'On OFF', value: offCount, sub: 'resting this month', icon: '🌙', color: '#fbbf24' },
+    { label: 'On OH', value: ohCount, sub: 'office hours coverage', icon: '📞', color: '#22c55e' },
+    { label: 'Total OFF Days', value: totalOffDays, sub: 'sum of all OFF entries', icon: '🛌', color: '#f59e0b' },
+    { label: 'Avg Workdays / Employee', value: avgWorkload, sub: 'avg working days', icon: '⚖', color: '#ec4899' },
+    { label: 'Rotation Cycle', value: state.rotationMemory.monthCount, sub: 'generations so far', icon: '🔄', color: '#a855f7' }
+  ];
+
+  const html = cards.map(c => `
+    <div class="dash-card" style="--card-accent: ${c.color}">
+      <div class="label">${c.label}</div>
+      <div class="value">${c.value}</div>
+      <div class="sub">${c.sub}</div>
+      <div class="icon">${c.icon}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('dashboard').innerHTML = html;
+}
+
+/* =====================================================================
+   RENDER MONTHLY ASSIGNMENTS PANEL
+   ===================================================================== */
+
+function renderMonthlyAssignments() {
+  const { year, month } = state;
+  const primaryRow = computePrimaryAssignmentsFromSchedule(year, month);
+
+  if (!primaryRow || Object.keys(primaryRow).length === 0) {
+    document.getElementById('monthlyAssignments').innerHTML =
+      '<div style="color:var(--text-muted);font-size:13px;">No schedule generated yet. Click "Generate Schedule" above.</div>';
+    return;
+  }
+
+  const shiftPriority = {
+    'AP-PB': 0,
+    'AP-P': 1, 'AP-B': 2,
+    'EU-P': 3, 'EU-B': 4, 'EU-PB': 5,
+    'NA-P': 6, 'NA-B': 7, 'NA-PB': 8,
+    'OH': 9, 'OFF': 10,
+    'VL': 11, 'EL': 12, 'SL': 13, 'ML': 14,
+    'HOL': 15, 'CO': 16, 'RTO': 17, 'TRNG': 18
+  };
+  const sorted = [...EMPLOYEES].sort((a, b) => {
+    const pa = shiftPriority[primaryRow[a]] ?? 99;
+    const pb = shiftPriority[primaryRow[b]] ?? 99;
+    if (pa !== pb) return pa - pb;
+    return a.localeCompare(b);
+  });
+
+  const totalDays = daysInMonth(year, month);
+  const html = sorted.map(emp => {
+    // Use the FULL schedule breakdown so secondary shifts (e.g. a few NA-PB
+    // added manually on top of an auto-generated AP-B) show up alongside the
+    // primary. This is the "auto-update" the user asked for.
+    const breakdown    = getEmployeeShiftBreakdown(emp, year, month);
+    const primaryEntry = breakdown[0] || ['OFF', 0];
+    const primary      = primaryEntry[0];
+    const primaryDays  = primaryEntry[1];
+    const color        = getShiftColorVar(primary);
+    const initials     = getInitials(emp);
+    const primaryTime  = SHIFT_TIMES[primary] || '';
+    const primaryHours = (SHIFT_HOURS[primary] || 0) * primaryDays;
+    const primaryStatus = primary === 'OFF' || primary === 'VL' || primary === 'TRNG' || primary === 'RTO'
+      ? `${primaryDays} day${primaryDays !== 1 ? 's' : ''} ${primary}`
+      : `${primaryDays} days • ${primaryHours}h`;
+    const isActive = filterState.employee === emp;
+
+    // Secondary shifts: any non-primary shift with ≥ 2 days in the month.
+    // These are typically manual additions (rotation pattern, cell edits).
+    const secondary = breakdown.slice(1).filter(([code, count]) => count >= 2);
+
+    const secondaryPills = secondary.map(([code, count]) => {
+      const c = getShiftColorVar(code);
+      return `<span class="assignment-shift secondary" style="background:${c}" title="${count} days">+${count} ${code}</span>`;
+    }).join('');
+
+    const secondaryLine = secondary.length > 0
+      ? `<span class="assignment-time also">Also: ${secondary.map(([c, n]) => `${c} (${n}d)`).join(', ')}</span>`
+      : '';
+
+    return `
+      <div class="assignment-card${isActive ? ' is-active' : ''}">
+        <div class="assignment-avatar" style="background:${color}">${initials}</div>
+        <div class="assignment-info">
+          <div class="assignment-name" title="${emp}">${emp}</div>
+          <div class="assignment-pills">
+            <span class="assignment-shift" style="background:${color}">${primary}</span>
+            ${secondaryPills}
+          </div>
+          <span class="assignment-time">${primaryTime}</span>
+          <span class="assignment-time">${primaryStatus}</span>
+          ${secondaryLine}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('monthlyAssignments').innerHTML = html;
+}
+
+/* =====================================================================
+   RENDER SCHEDULE TABLE
+   ===================================================================== */
+
+function render() {
+  renderMonthlyAssignments();
+  renderScheduleTable();
+  renderStatsTable();
+  renderMonthlyShiftAssignment();
+  renderLegend();
+  renderCoverageBanner();
+  updateDashboard();
+  document.getElementById('scheduleMonthLabel').textContent =
+    MONTH_NAMES[state.month] + ' ' + state.year + ' Schedule';
+}
+
+function syncFilterSelects() {
+  const empSel = document.getElementById('filterEmployee');
+  const shiftSel = document.getElementById('filterShift');
+  if (empSel.options.length <= 1) {
+    EMPLOYEES.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e; opt.textContent = e;
+      empSel.appendChild(opt);
+    });
+  }
+  if (shiftSel.options.length <= 1) {
+    SHIFT_CODES.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      shiftSel.appendChild(opt);
+    });
+  }
+  empSel.value = filterState.employee;
+  shiftSel.value = filterState.shift;
+  document.querySelectorAll('.filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filterState.mode);
+  });
+}
+
+function shiftClass(code) {
+  if (!code) return 'shift-empty';
+  return 'shift-' + code.toLowerCase().replace(/[^a-z0-9]/g, '-');
+}
+
+/**
+ * Build a DocumentFragment for the schedule table in one go — avoids
+ * repeated layout reflows from re-rendering 30+ rows × N cols.
+ */
+function renderScheduleTable() {
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+  const table = document.getElementById('scheduleTable');
+
+  // Live primary assignments (read from the schedule itself)
+  const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
+
+  // Build with a fragment
+  const frag = document.createDocumentFragment();
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  headRow.appendChild(makeTh('Date', 'sticky-col'));
+  headRow.appendChild(makeTh('Day', 'sticky-col-2'));
+  EMPLOYEES.forEach(emp => {
+    const monthlyShift = firstRow[emp] || 'OFF';
+    const color = getShiftColorVar(monthlyShift);
+    const parts = emp.split(' ');
+    const first = parts.shift();
+    const th = document.createElement('th');
+    th.innerHTML = `${escapeHtml(first)}<br>
+      <small style="font-weight:400;opacity:0.7">${escapeHtml(parts.join(' '))}</small><br>
+      <span class="monthly-shift-header" style="background:${color}">${monthlyShift}</span>`;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  frag.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    const dow = getDayOfWeek(year, month, d);
+    const wkend = dow === 0 || dow === 6;
+    const row = state.schedule[key] || {};
+
+    if (filterState.mode === 'weekend' && !wkend) continue;
+    if (filterState.mode === 'weekday' && wkend) continue;
+
+    const tr = document.createElement('tr');
+    if (wkend) tr.className = 'weekend';
+
+    // Sticky date cell
+    const tdDate = document.createElement('td');
+    tdDate.className = 'sticky-col';
+    tdDate.innerHTML = `<div class="date-num">${d}</div>`;
+    tr.appendChild(tdDate);
+
+    const tdDay = document.createElement('td');
+    tdDay.className = 'sticky-col-2';
+    tdDay.innerHTML = `<div class="date-day">${DAY_NAMES_SHORT[dow]}</div>`;
+    tr.appendChild(tdDay);
+
+    for (const emp of EMPLOYEES) {
+      const td = document.createElement('td');
+      td.classList.add('cell-hoverable');
+
+      if (filterState.employee && filterState.employee !== emp) {
+        td.className = shiftClass('empty');
+        tr.appendChild(td);
+        continue;
+      }
+      const s = row[emp] || '';
+      if (filterState.shift && filterState.shift !== s) {
+        td.className = shiftClass('empty');
+        tr.appendChild(td);
+        continue;
+      }
+      td.className = s ? shiftClass(s) : shiftClass('empty');
+      td.dataset.emp = emp;
+      td.dataset.day = d;
+
+      const sel = document.createElement('select');
+      sel.className = 'cell-select';
+      sel.dataset.emp = emp;
+      sel.dataset.day = d;
+      sel.innerHTML = SHIFT_CODES.map(c =>
+        `<option value="${c}" ${c === s ? 'selected' : ''}>${c}</option>`
+      ).join('');
+      td.appendChild(sel);
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+  frag.appendChild(tbody);
+
+  // Single DOM update
+  table.innerHTML = '';
+  table.appendChild(frag);
+}
+
+function makeTh(text, cls) {
+  const th = document.createElement('th');
+  if (cls) th.className = cls;
+  th.textContent = text;
+  return th;
+}
+
+/** Tiny HTML escape (only used for user-provided names). */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+/* =====================================================================
+   EVENT DELEGATION
+   ---------------------------------------------------------------------
+   A single change handler is bound once to the schedule table. The
+   `data-emp` and `data-day` attributes identify the cell — no
+   addEventListener-per-cell loop.
+   ===================================================================== */
+
+function onScheduleTableChange(e) {
+  const sel = e.target;
+  if (!(sel instanceof HTMLSelectElement)) return;
+  if (!sel.classList.contains('cell-select')) return;
+
+  const emp = sel.dataset.emp;
+  const day = parseInt(sel.dataset.day, 10);
+  const newShift = sel.value;
+  const key = dateKey(state.year, state.month, day);
+
+  if (!state.schedule[key]) state.schedule[key] = {};
+
+  // Capture the previous value (used to decide if VL needs an update).
+  const prev = state.schedule[key][emp];
+
+  state.schedule[key][emp] = newShift;
+
+  // Mirror VL into the legacy VL map.
+  if (newShift === 'VL') {
+    if (!state.vl[key]) state.vl[key] = [];
+    if (!state.vl[key].includes(emp)) state.vl[key].push(emp);
+  } else if (prev === 'VL') {
+    if (state.vl[key]) {
+      state.vl[key] = state.vl[key].filter(x => x !== emp);
+      if (state.vl[key].length === 0) delete state.vl[key];
+    }
+  }
+
+  // Live update of the cell color + tiny pulse
+  const td = sel.closest('td');
+  if (td) {
+    td.className = shiftClass(newShift);
+    td.classList.add('pulse');
+    setTimeout(() => td.classList.remove('pulse'), 400);
+  }
+
+  // Sync all dependent panels in a single batched render
+  syncPrimaryAssignments();
+  renderStatsTable();
+  renderMonthlyShiftAssignment();
+  renderMonthlyAssignments();     // ← matches schedule (the priority fix)
+  renderCoverageBanner();
+  updateDashboard();
+  saveSchedule();
+}
+
+/* =====================================================================
+   STATISTICS TABLE
+   ===================================================================== */
+
+function renderStatsTable() {
+  const stats = calculateStatistics();
+  const cols = [
+    'AP-P', 'AP-B', 'AP-PB',
+    'EU-P', 'EU-B', 'EU-PB',
+    'NA-P', 'NA-B', 'NA-PB',
+    'OH', 'OFF',
+    'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
+    'RTO', 'TRNG',
+    'Working', 'Night', 'Hours', 'Workload %'
+  ];
+
+  let html = '<thead><tr><th>Employee</th>';
+  cols.forEach(c => html += `<th>${c}</th>`);
+  html += '</tr></thead><tbody>';
+
+  for (const e of EMPLOYEES) {
+    const s = stats[e];
+    html += `<tr><td>${e}</td>`;
+    for (const c of cols) {
+      if (c === 'Working')       html += `<td><strong>${s.workingDays}</strong></td>`;
+      else if (c === 'Night')    html += `<td>${s.nightShifts}</td>`;
+      else if (c === 'Hours')    html += `<td>${s.totalHours}</td>`;
+      else if (c === 'Workload %') {
+        const cls = s.workloadPct >= 90 ? 'info'
+                  : s.workloadPct >= 50 ? 'good'
+                  : 'warn';
+        html += `<td><span class="badge ${cls}">${s.workloadPct}%</span></td>`;
+      }
+      else html += `<td>${s[c] || 0}</td>`;
+    }
+    html += '</tr>';
+  }
+
+  // Totals row
+  html += '<tfoot><tr><td>Total</td>';
+  for (const c of cols) {
+    if (c === 'Working') {
+      const total = EMPLOYEES.reduce((s, e) => s + stats[e].workingDays, 0);
+      html += `<td>${total}</td>`;
+    } else if (c === 'Night') {
+      const total = EMPLOYEES.reduce((s, e) => s + stats[e].nightShifts, 0);
+      html += `<td>${total}</td>`;
+    } else if (c === 'Hours') {
+      const total = EMPLOYEES.reduce((s, e) => s + stats[e].totalHours, 0);
+      html += `<td>${total}</td>`;
+    } else if (c === 'Workload %') {
+      const avg = EMPLOYEES.length
+        ? Math.round(EMPLOYEES.reduce((s, e) => s + stats[e].workloadPct, 0) / EMPLOYEES.length)
+        : 0;
+      html += `<td>${avg}%</td>`;
+    } else {
+      const total = EMPLOYEES.reduce((s, e) => s + (stats[e][c] || 0), 0);
+      html += `<td>${total}</td>`;
+    }
+  }
+  html += '</tr></tfoot>';
+
+  document.getElementById('statsTable').innerHTML = html;
+}
+
+/* =====================================================================
+   MONTHLY SHIFT ASSIGNMENT TABLE
+   ===================================================================== */
+
+function renderMonthlyShiftAssignment() {
+  const { year, month } = state;
+  const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
+  const stats = calculateStatistics();
+
+  const MSA_COLS = [
+    { key: 'RTO',   label: 'RTO',                     kind: 'cyan'   },
+    { key: 'OFF',   label: 'OFF',                     kind: 'yellow' },
+    { key: 'AP-P',  label: 'AP-P',                    kind: 'green'  },
+    { key: 'EU-P',  label: 'EU-P',                    kind: 'cyan'   },
+    { key: 'NA-P',  label: 'NA-P',                    kind: 'yellow' },
+    { key: 'AP-B',  label: 'AP-B',                    kind: 'red'    },
+    { key: 'EU-B',  label: 'EU-B',                    kind: 'cyan'   },
+    { key: 'NA-B',  label: 'NA-B',                    kind: 'yellow' },
+    { key: 'OH',    label: 'OH',                      kind: 'green'  },
+    { key: 'AP-PB', label: 'AP-PB',                   kind: 'green'  },
+    { key: 'NA-PB', label: 'NA-PB',                   kind: 'yellow' },
+    { key: 'EU-PB', label: 'EU-PB',                   kind: 'cyan'   },
+    { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO',      kind: 'yellow' },
+    { key: 'TRNG',  label: 'TRNG',                    kind: 'purple' }
+  ];
+
+  let html = '<thead><tr>';
+  html += '<th class="col-shift">Shift</th>';
+  html += '<th class="col-desc">Description</th>';
+  for (const c of MSA_COLS) {
+    html += `<th>${c.label}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  if (!firstRow || Object.keys(firstRow).length === 0) {
+    html += `<tr><td colspan="${MSA_COLS.length + 2}" style="padding:30px;color:var(--text-muted);">No schedule generated yet. Click "Generate Schedule" above to populate the Monthly Shift Assignment table.</td></tr>`;
+    html += '</tbody>';
+    document.getElementById('monthlyShiftTable').innerHTML = html;
+    return;
+  }
+
+  const valueFor = (emp, key) => {
+    const s = stats[emp];
+    if (key === 'LEAVE') {
+      return (s.VL || 0) + (s.EL || 0) + (s.SL || 0)
+           + (s.ML || 0) + (s.HOL || 0) + (s.CO || 0);
+    }
+    return s[key] || 0;
+  };
+
+  for (const emp of EMPLOYEES) {
+    const primaryShift = firstRow[emp] || 'OFF';
+    const description  = SHIFT_TIMES[primaryShift] || '-';
+    const shiftColor   = getShiftColorVar(primaryShift);
+    const initials     = getInitials(emp);
+
+    html += '<tr>';
+    html += `<td class="col-shift">
+      <div class="emp-cell">
+        <div class="emp-avatar" style="background:${shiftColor}">${initials}</div>
+        <div class="emp-meta">
+          <span class="emp-name" title="${emp}">${emp}</span>
+          <span class="emp-pill" style="background:${shiftColor}">${primaryShift}</span>
+        </div>
+      </div>
+    </td>`;
+    html += `<td class="col-desc">
+      <span class="desc-shift" style="background:${shiftColor}">${primaryShift}</span>
+      <span class="desc-time">${description}</span>
+    </td>`;
+
+    for (const c of MSA_COLS) {
+      const v = valueFor(emp, c.key);
+      if (!v) {
+        html += `<td class="msa-cell-zero">—</td>`;
+      } else {
+        html += `<td class="msa-cell-${c.kind}">${v}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+
+  html += '<tfoot><tr>';
+  html += '<td class="col-shift">Totals</td>';
+  html += '<td class="col-desc">All employees</td>';
+  for (const c of MSA_COLS) {
+    let total = 0;
+    for (const emp of EMPLOYEES) total += valueFor(emp, c.key);
+    html += `<td class="msa-cell-${c.kind}">${total || '—'}</td>`;
+  }
+  html += '</tr></tfoot>';
+
+  document.getElementById('monthlyShiftTable').innerHTML = html;
+}
+
+/* =====================================================================
+   LEGEND
+   ===================================================================== */
+
+function renderLegend() {
+  const codes = [
+    'AP-P','AP-B','EU-P','EU-B','NA-P','NA-B',
+    'AP-PB','EU-PB','NA-PB',
+    'OH','OFF',
+    'VL','EL','SL','ML','HOL','CO',
+    'RTO','TRNG'
+  ];
+  const html = codes.map(code => {
+    const col = getShiftColorVar(code);
+    const time = SHIFT_TIMES[code] || '';
+    const borderStyle = (code === 'OH' || code === 'RTO') ? 'border:1px solid var(--border-strong);' : '';
+    // In dark mode white swatches need a border so they remain visible
+    const darkBorder = (code === 'OH' || code === 'RTO') ? 'border:1px solid #475569;' : '';
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    return `
+      <div class="legend-item">
+        <span class="legend-swatch" style="background:${col}; ${isDark ? darkBorder : borderStyle}"></span>
+        <span>${code}</span>
+        ${time ? `<span class="legend-time">${time}</span>` : ''}
+      </div>
+    `;
+  }).join('');
+  document.getElementById('legend').innerHTML = html;
+}
+
+/* =====================================================================
+   EXPORTS
+   ===================================================================== */
+
+function csvEscape(v) {
+  const s = v === null || v === undefined ? '' : String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportCSV() {
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+
+  const header = ['Date', 'Day', ...EMPLOYEES];
+  const rows = [header];
+
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    const dow = DAY_NAMES_SHORT[getDayOfWeek(year, month, d)];
+    const formattedDate = `${d}-${MONTH_NAMES_SHORT[month]}`;
+
+    const row = [formattedDate, dow];
+    for (const emp of EMPLOYEES) {
+      row.push((state.schedule[key] || {})[emp] || '');
+    }
+    rows.push(row);
+  }
+
+  // Statistics block
+  rows.push([]);
+  rows.push(['Statistics & Workload']);
+  rows.push([
+    'Employee', 'AP-P', 'AP-B', 'AP-PB',
+    'EU-P', 'EU-B', 'EU-PB',
+    'NA-P', 'NA-B', 'NA-PB',
+    'OH', 'OFF',
+    'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
+    'RTO', 'TRNG',
+    'Working', 'Night', 'Hours', 'Workload %'
+  ]);
+
+  const stats = calculateStatistics();
+  for (const e of EMPLOYEES) {
+    const s = stats[e];
+    rows.push([
+      e,
+      s['AP-P'], s['AP-B'], s['AP-PB'],
+      s['EU-P'], s['EU-B'], s['EU-PB'],
+      s['NA-P'], s['NA-B'], s['NA-PB'],
+      s['OH'], s['OFF'],
+      s['VL'], s['EL'], s['SL'], s['ML'], s['HOL'], s['CO'],
+      s['RTO'], s['TRNG'],
+      s.workingDays, s.nightShifts, s.totalHours, s.workloadPct + '%'
+    ]);
+  }
+
+  // Monthly Shift Assignment block
+  rows.push([]);
+  rows.push(['Monthly Shift Assignment']);
+  rows.push(['Shift', 'Description',
+             'RTO', 'OFF',
+             'AP-P', 'EU-P', 'NA-P',
+             'AP-B', 'EU-B', 'NA-B',
+             'OH', 'VL/EL/SL/ML/HOL/CO', 'TRNG']);
+  const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
+  for (const e of EMPLOYEES) {
+    const s = firstRow[e] || 'OFF';
+    const desc = SHIFT_TIMES[s] || '';
+    const st = stats[e];
+    const leave = (st.VL || 0) + (st.EL || 0) + (st.SL || 0)
+                + (st.ML || 0) + (st.HOL || 0) + (st.CO || 0);
+    rows.push([
+      e, desc,
+      st.RTO || 0, st.OFF || 0,
+      st['AP-P'] || 0, st['EU-P'] || 0, st['NA-P'] || 0,
+      st['AP-B'] || 0, st['EU-B'] || 0, st['NA-B'] || 0,
+      st.OH || 0, leave,
+      st.TRNG || 0
+    ]);
+  }
+
+  // \uFEFF BOM so Excel opens UTF-8 cleanly
+  const csv = '\uFEFF' + rows
+    .map(r => r.map(csvEscape).join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `schedule_${year}_${pad2(month + 1)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  toast('CSV exported');
+}
+
+/* ---- Excel export (xlsx-js-style fork of SheetJS) --------------- */
+
+function isCellTextWhite(hex) {
+  // Decide whether to use white text on the cell background.
+  if (!hex) return false;
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return false;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  // Approximate luminance
+  const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return L < 0.55;
+}
+
+function excelStyleFor(hex, opts = {}) {
+  return {
+    fill: { patternType: 'solid', fgColor: { rgb: argbFromHex(hex) } },
+    font: {
+      color: { rgb: argbFromHex(isCellTextWhite(hex) ? '#FFFFFF' : '#0f172a') },
+      bold: !!opts.bold,
+      sz: opts.sz || 11,
+      name: 'Calibri'
+    },
+    alignment: {
+      horizontal: opts.align || 'center',
+      vertical: 'center',
+      wrapText: opts.wrap || true
+    },
+    border: {
+      top:    { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      bottom: { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      left:   { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      right:  { style: 'thin', color: { rgb: 'FFCBD5E1' } }
+    }
+  };
+}
+
+function headerStyle() {
+  return {
+    fill: { patternType: 'solid', fgColor: { rgb: 'FF1E293B' } },
+    font: { color: { rgb: 'FFFFFFFF' }, bold: true, sz: 12, name: 'Calibri' },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: {
+      top:    { style: 'thin', color: { rgb: 'FF94A3B8' } },
+      bottom: { style: 'medium', color: { rgb: 'FF94A3B8' } },
+      left:   { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      right:  { style: 'thin', color: { rgb: 'FFCBD5E1' } }
+    }
+  };
+}
+
+function stickyHeaderStyle() {
+  return {
+    fill: { patternType: 'solid', fgColor: { rgb: 'FFE2E8F0' } },
+    font: { color: { rgb: 'FF0F172A' }, bold: true, sz: 12, name: 'Calibri' },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: {
+      top:    { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      bottom: { style: 'medium', color: { rgb: 'FF94A3B8' } },
+      left:   { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      right:  { style: 'medium', color: { rgb: 'FF94A3B8' } }
+    }
+  };
+}
+
+function metaCellStyle(hex = '#ffffff') {
+  return {
+    fill: { patternType: 'solid', fgColor: { rgb: argbFromHex(hex) } },
+    font: { color: { rgb: 'FF0F172A' }, bold: true, sz: 11, name: 'Calibri' },
+    alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+    border: {
+      top:    { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      bottom: { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      left:   { style: 'thin', color: { rgb: 'FFCBD5E1' } },
+      right:  { style: 'thin', color: { rgb: 'FFCBD5E1' } }
+    }
+  };
+}
+
+function footerStyle() {
+  return {
+    fill: { patternType: 'solid', fgColor: { rgb: 'FFE2E8F0' } },
+    font: { color: { rgb: 'FF0F172A' }, bold: true, sz: 11, name: 'Calibri' },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: {
+      top:    { style: 'medium', color: { rgb: 'FF94A3B8' } },
+      bottom: { style: 'thin',   color: { rgb: 'FFCBD5E1' } },
+      left:   { style: 'thin',   color: { rgb: 'FFCBD5E1' } },
+      right:  { style: 'thin',   color: { rgb: 'FFCBD5E1' } }
+    }
+  };
+}
+
+function buildScheduleSheet() {
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+  const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
+
+  // Build AOo matrix
+  const aoa = [];
+
+  // Row 0: title
+  aoa.push([`${MONTH_NAMES[month]} ${year} — Monthly Schedule`, '', ...Array(EMPLOYEES.length).fill('')]);
+  // Row 1: header — Date / Day / employees with primary shift pill
+  aoa.push(['Date', 'Day', ...EMPLOYEES.map(e => `${e}\n${firstRow[e] || 'OFF'}`)]);
+  // Day rows
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    const dow = DAY_NAMES_SHORT[getDayOfWeek(year, month, d)];
+    const formattedDate = `${d}-${MONTH_NAMES_SHORT[month]}`;
+    const row = state.schedule[key] || {};
+    aoa.push([
+      formattedDate,
+      dow,
+      ...EMPLOYEES.map(e => row[e] || '')
+    ]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Apply column widths
+  ws['!cols'] = [
+    { wch: 14 }, { wch: 8 },
+    ...EMPLOYEES.map(() => ({ wch: 12 }))
+  ];
+
+  // Merge title across the width
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: EMPLOYEES.length + 1 } }
+  ];
+
+  // Apply styles cell-by-cell
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  // Title row — banner style
+  const titleCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+  ws[titleCell].s = {
+    fill: { patternType: 'solid', fgColor: { rgb: 'FF1E40AF' } },
+    font: { color: { rgb: 'FFFFFFFF' }, bold: true, sz: 16, name: 'Calibri' },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: {}
+  };
+
+  // Header row 1 — sticky style for first two cols, dark style for employees
+  for (let c = 0; c <= range.e.c; c++) {
+    const a = XLSX.utils.encode_cell({ r: 1, c });
+    if (!ws[a]) continue;
+    if (c <= 1) ws[a].s = stickyHeaderStyle();
+    else {
+      // White text on header dark, but show the primary-shift pill instead
+      // (we keep the cell text as "Name\nPShift" but color background by pill)
+      const emp = EMPLOYEES[c - 2];
+      const pill = (firstRow[emp] || 'OFF');
+      const pillColor = getShiftColorHex(pill);
+      ws[a].s = excelStyleFor(pillColor, { bold: true, wrap: true });
+    }
+  }
+
+  // Body — sticky style for date / day, shift color for employees
+  for (let r = 2; r <= range.e.r; r++) {
+    // Date cell
+    const dateCell = XLSX.utils.encode_cell({ r, c: 0 });
+    if (ws[dateCell]) ws[dateCell].s = metaCellStyle('#f1f5f9');
+
+    const dowIdx = getDayOfWeek(state.year, state.month, (r - 1)); // r=2 → day 1
+    const wkend = (dowIdx === 0 || dowIdx === 6);
+    const dayCell = XLSX.utils.encode_cell({ r, c: 1 });
+    if (ws[dayCell]) {
+      ws[dayCell].s = excelStyleFor(wkend ? '#fef3c7' : '#f8fafc', { bold: true, align: 'center' });
+    }
+    for (let c = 2; c <= range.e.c; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+      if (!ws[cellRef]) continue;
+      const value = ws[cellRef].v;
+      const color = getShiftColorHex(value);
+      ws[cellRef].s = excelStyleFor(color, { bold: true });
+    }
+  }
+
+  // Freeze panes — first two cols + header rows
+  ws['!freeze'] = { xSplit: 2, ySplit: 2 };
+  ws['!views'] = [{ state: 'frozen', xSplit: 2, ySplit: 2, topLeftCell: 'C3', activePane: 'bottomRight' }];
+
+  return ws;
+}
+
+function buildStatsSheet() {
+  const stats = calculateStatistics();
+  const cols = [
+    'Employee', 'AP-P', 'AP-B', 'AP-PB',
+    'EU-P', 'EU-B', 'EU-PB',
+    'NA-P', 'NA-B', 'NA-PB',
+    'OH', 'OFF',
+    'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
+    'RTO', 'TRNG',
+    'Working', 'Night', 'Hours', 'Workload %'
+  ];
+
+  const aoa = [];
+  aoa.push([`Statistics & Workload — ${MONTH_NAMES[state.month]} ${state.year}`, '']);
+  aoa.push(cols);
+
+  for (const e of EMPLOYEES) {
+    const s = stats[e];
+    aoa.push([
+      e,
+      s['AP-P'], s['AP-B'], s['AP-PB'],
+      s['EU-P'], s['EU-B'], s['EU-PB'],
+      s['NA-P'], s['NA-B'], s['NA-PB'],
+      s['OH'], s['OFF'],
+      s['VL'], s['EL'], s['SL'], s['ML'], s['HOL'], s['CO'],
+      s['RTO'], s['TRNG'],
+      s.workingDays, s.nightShifts, s.totalHours, s.workloadPct + '%'
+    ]);
+  }
+  // Totals
+  const totals = ['Total'];
+  for (let i = 1; i < cols.length - 3; i++) {
+    totals.push(EMPLOYEES.reduce((sum, e) => sum + (stats[e][cols[i]] || 0), 0));
+  }
+  const totalWork = EMPLOYEES.reduce((s, e) => s + stats[e].workingDays, 0);
+  const totalNight = EMPLOYEES.reduce((s, e) => s + stats[e].nightShifts, 0);
+  const totalHours = EMPLOYEES.reduce((s, e) => s + stats[e].totalHours, 0);
+  const avgWorkload = EMPLOYEES.length
+    ? Math.round(EMPLOYEES.reduce((s, e) => s + stats[e].workloadPct, 0) / EMPLOYEES.length)
+    : 0;
+  totals.push(totalWork, totalNight, totalHours, avgWorkload + '%');
+  aoa.push(totals);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 22 }, ...cols.slice(1).map(() => ({ wch: 10 }))];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }];
+
+  // Title row
+  ws[XLSX.utils.encode_cell({ r: 0, c: 0 })].s = {
+    fill: { patternType: 'solid', fgColor: { rgb: 'FF1E40AF' } },
+    font: { color: { rgb: 'FFFFFFFF' }, bold: true, sz: 14 },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  };
+
+  // Header row
+  for (let c = 0; c < cols.length; c++) {
+    const a = XLSX.utils.encode_cell({ r: 1, c });
+    if (!ws[a]) continue;
+    ws[a].s = c === 0 ? stickyHeaderStyle() : headerStyle();
+  }
+
+  // Body rows — color-code each count cell by shift
+  for (let r = 2; r < 2 + EMPLOYEES.length; r++) {
+    const empCell = XLSX.utils.encode_cell({ r, c: 0 });
+    if (ws[empCell]) ws[empCell].s = metaCellStyle('#f1f5f9');
+    for (let c = 1; c < cols.length; c++) {
+      const a = XLSX.utils.encode_cell({ r, c });
+      if (!ws[a]) continue;
+      const code = cols[c];
+      const hex  = getShiftColorHex(code);
+      ws[a].s = excelStyleFor(hex);
+    }
+  }
+  // Totals row
+  const totalRow = 2 + EMPLOYEES.length;
+  for (let c = 0; c < cols.length; c++) {
+    const a = XLSX.utils.encode_cell({ r: totalRow, c });
+    if (!ws[a]) continue;
+    ws[a].s = footerStyle();
+  }
+  ws['!freeze'] = { xSplit: 1, ySplit: 2 };
+  ws['!views'] = [{ state: 'frozen', xSplit: 1, ySplit: 2, topLeftCell: 'B3', activePane: 'bottomRight' }];
+  return ws;
+}
+
+function buildMSASheet() {
+  const firstRow = computePrimaryAssignmentsFromSchedule(state.year, state.month);
+  const stats = calculateStatistics();
+
+  const MSA_COLS = [
+    { key: 'RTO',   label: 'RTO',                     kind: 'cyan'   },
+    { key: 'OFF',   label: 'OFF',                     kind: 'yellow' },
+    { key: 'AP-P',  label: 'AP-P',                    kind: 'green'  },
+    { key: 'EU-P',  label: 'EU-P',                    kind: 'cyan'   },
+    { key: 'NA-P',  label: 'NA-P',                    kind: 'yellow' },
+    { key: 'AP-B',  label: 'AP-B',                    kind: 'red'    },
+    { key: 'EU-B',  label: 'EU-B',                    kind: 'cyan'   },
+    { key: 'NA-B',  label: 'NA-B',                    kind: 'yellow' },
+    { key: 'OH',    label: 'OH',                      kind: 'green'  },
+    { key: 'AP-PB', label: 'AP-PB',                   kind: 'green'  },
+    { key: 'NA-PB', label: 'NA-PB',                   kind: 'yellow' },
+    { key: 'EU-PB', label: 'EU-PB',                   kind: 'cyan'   },
+    { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO',      kind: 'yellow' },
+    { key: 'TRNG',  label: 'TRNG',                    kind: 'purple' }
+  ];
+
+  const valueFor = (emp, key) => {
+    const s = stats[emp];
+    if (key === 'LEAVE') {
+      return (s.VL || 0) + (s.EL || 0) + (s.SL || 0)
+           + (s.ML || 0) + (s.HOL || 0) + (s.CO || 0);
+    }
+    return s[key] || 0;
+  };
+
+  const aoa = [];
+  aoa.push([`Monthly Shift Assignment — ${MONTH_NAMES[state.month]} ${state.year}`]);
+  aoa.push(['Shift', 'Description', ...MSA_COLS.map(c => c.label)]);
+
+  if (firstRow && Object.keys(firstRow).length > 0) {
+    for (const emp of EMPLOYEES) {
+      const s = firstRow[emp] || 'OFF';
+      const desc = SHIFT_TIMES[s] || '';
+      aoa.push([`${emp} (${s})`, desc, ...MSA_COLS.map(c => valueFor(emp, c.key) || '')]);
+    }
+
+    const totals = ['Totals', 'All employees',
+      ...MSA_COLS.map(c => EMPLOYEES.reduce((t, emp) => t + valueFor(emp, c.key), 0))];
+    aoa.push(totals);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 26 }, { wch: 22 }, ...MSA_COLS.map(() => ({ wch: 10 }))];
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: MSA_COLS.length + 1 } }];
+
+  ws[XLSX.utils.encode_cell({ r: 0, c: 0 })].s = {
+    fill: { patternType: 'solid', fgColor: { rgb: 'FF1E40AF' } },
+    font: { color: { rgb: 'FFFFFFFF' }, bold: true, sz: 14 },
+    alignment: { horizontal: 'center', vertical: 'center' }
+  };
+
+  for (let c = 0; c <= MSA_COLS.length + 1; c++) {
+    const a = XLSX.utils.encode_cell({ r: 1, c });
+    if (!ws[a]) continue;
+    ws[a].s = c <= 1 ? stickyHeaderStyle() : headerStyle();
+  }
+
+  if (firstRow && Object.keys(firstRow).length > 0) {
+    for (let r = 2; r < 2 + EMPLOYEES.length; r++) {
+      const emp = EMPLOYEES[r - 2];
+      const ps = firstRow[emp] || 'OFF';
+      const empCell = XLSX.utils.encode_cell({ r, c: 0 });
+      const descCell = XLSX.utils.encode_cell({ r, c: 1 });
+      const empColor = getShiftColorHex(ps);
+      ws[empCell].s = excelStyleFor(empColor, { bold: true, align: 'left' });
+      ws[descCell].s = metaCellStyle('#f8fafc');
+      for (let c = 2; c <= MSA_COLS.length + 1; c++) {
+        const a = XLSX.utils.encode_cell({ r, c });
+        if (!ws[a]) continue;
+        const col = MSA_COLS[c - 2];
+        const hex = getShiftColorHex(col.key === 'LEAVE' ? 'VL' : col.key);
+        ws[a].s = excelStyleFor(hex);
+      }
+    }
+    const totalRow = 2 + EMPLOYEES.length;
+    for (let c = 0; c <= MSA_COLS.length + 1; c++) {
+      const a = XLSX.utils.encode_cell({ r: totalRow, c });
+      if (!ws[a]) continue;
+      ws[a].s = footerStyle();
+    }
+  }
+
+  ws['!freeze'] = { xSplit: 2, ySplit: 2 };
+  ws['!views'] = [{ state: 'frozen', xSplit: 2, ySplit: 2, topLeftCell: 'C3', activePane: 'bottomRight' }];
+  return ws;
+}
+
+function exportExcel() {
+  if (typeof XLSX === 'undefined' || !XLSX.utils || !XLSX.utils.book_new) {
+    toast('Excel library not loaded — using CSV fallback', 'warn');
+    exportCSV();
+    return;
+  }
+
+  try {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, buildScheduleSheet(), 'Schedule');
+    XLSX.utils.book_append_sheet(wb, buildStatsSheet(),    'Statistics');
+    XLSX.utils.book_append_sheet(wb, buildMSASheet(),      'Monthly Assignment');
+
+    const { year, month } = state;
+    XLSX.writeFile(wb, `schedule_${year}_${pad2(month + 1)}.xlsx`);
+    toast('Excel workbook exported');
+  } catch (err) {
+    console.error(err);
+    toast('Excel export failed: ' + err.message, 'error');
+  }
+}
+
+function printSchedule() {
+  window.print();
+}
+
+function exportPDF() {
+  toast('Use the Print dialog and choose "Save as PDF"', 'warn');
+  setTimeout(() => window.print(), 600);
+}
+
+/* =====================================================================
+   STORAGE
+   ===================================================================== */
+
+function saveSchedule() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.warn('LocalStorage save failed', err);
+  }
+}
+
+function loadSchedule() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return false;
+    state = Object.assign(defaultState(), parsed);
+    state.rotationMemory = Object.assign(
+      defaultState().rotationMemory,
+      parsed.rotationMemory || {}
+    );
+    return true;
+  } catch (err) {
+    console.warn('LocalStorage load failed', err);
+    return false;
+  }
+}
+
+/* =====================================================================
+   DROPDOWN POPULATION
+   ===================================================================== */
+
+function populateMonthYear() {
+  const monthSel = document.getElementById('monthSelect');
+  const yearSel  = document.getElementById('yearSelect');
+  MONTH_NAMES.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = m;
+    monthSel.appendChild(opt);
+  });
+  const thisYear = new Date().getFullYear();
+  for (let y = thisYear - 2; y <= thisYear + 3; y++) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    yearSel.appendChild(opt);
+  }
+  monthSel.value = state.month;
+  yearSel.value = state.year;
+}
+
+function populateRotationControls() {
+  const empSel = document.getElementById('qaEmployee');
+  const patSel = document.getElementById('qaPattern');
+  const swatch = document.getElementById('qaSwatch');
+
+  empSel.innerHTML = '';
+  patSel.innerHTML = '';
+
+  EMPLOYEES.forEach(emp => {
+    const o = document.createElement('option');
+    o.value = emp; o.textContent = emp;
+    empSel.appendChild(o);
+  });
+  ROTATION_PATTERNS.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = `${p} — ${SHIFT_TIMES[p] || ''}`;
+    patSel.appendChild(o);
+  });
+  updateQaSwatch();
+}
+
+function updateQaSwatch() {
+  const swatch = document.getElementById('qaSwatch');
+  const patSel = document.getElementById('qaPattern');
+  const code = patSel.value;
+  swatch.style.background = getShiftColorVar(code);
+  swatch.textContent = code;
+  // visibility — white cells need a border
+  if (code === 'OH' || code === 'RTO') {
+    swatch.style.color = '#0f172a';
+    swatch.style.border = '1px solid var(--border-strong)';
+  } else {
+    swatch.style.color = 'white';
+    swatch.style.border = 'none';
+  }
+}
+
+/* =====================================================================
+   ENSURE SCHEDULE EXISTS FOR THE CURRENT MONTH
+   ===================================================================== */
+
+function ensureScheduleForMonth() {
+  const firstKey = dateKey(state.year, state.month, 1);
+  if (!state.schedule[firstKey]) {
+    const offset = ((state.year - 2026) * 12 + (state.month - 5) + 700) % EMPLOYEES.length;
+    state.rotationMemory.monthCount = offset;
+    generateSchedule();
+  } else {
+    // Already have a schedule — make sure primary assignments are derived
+    syncPrimaryAssignments();
+    render();
+  }
+}
+
+/* =====================================================================
+   EVENT WIRING
+   ===================================================================== */
+
+function wireEvents() {
+  document.getElementById('monthSelect').addEventListener('change', (e) => {
+    state.month = parseInt(e.target.value, 10);
+    ensureScheduleForMonth();
+    saveSchedule();
+  });
+
+  document.getElementById('yearSelect').addEventListener('change', (e) => {
+    state.year = parseInt(e.target.value, 10);
+    ensureScheduleForMonth();
+    saveSchedule();
+  });
+
+  document.getElementById('btnGenerate').addEventListener('click', async () => {
+    const ok = await confirmModal(
+      'Generate Schedule',
+      'This will rotate the monthly shift assignments and assign each employee 2 OFF days per week, distributed fairly. Continue?',
+      'Generate', 'primary'
+    );
+    if (ok) {
+      generateSchedule();
+      populateRotationControls();
+    }
+  });
+
+  document.getElementById('btnNextMonth').addEventListener('click', async () => {
+    const ok = await confirmModal(
+      'Generate Next Month',
+      'Move forward one month and rotate starting assignments. Continue?',
+      'Next Month', 'primary'
+    );
+    if (ok) generateNextMonth();
+  });
+
+  document.getElementById('btnReset').addEventListener('click', async () => {
+    const ok = await confirmModal(
+      'Reset Rotation Memory',
+      'This clears the rotation memory and vacation leaves for the current month. The schedule itself will be regenerated. Continue?',
+      'Reset', 'primary'
+    );
+    if (ok) softReset();
+  });
+
+  document.getElementById('btnClearAll').addEventListener('click', async () => {
+    const ok = await confirmModal(
+      'Clear All Data',
+      '⚠ This will COMPLETELY wipe the scheduler — employees, schedule, statistics, monthly shift assignment, rotation memory, and saved browser storage. The app returns to a blank state. Continue?',
+      'Yes, clear everything', 'danger'
+    );
+    if (ok) clearAll();
+  });
+
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = state.theme;
+    document.getElementById('themeToggle').textContent = state.theme === 'dark' ? '☀️' : '🌙';
+    saveSchedule();
+  });
+
+  document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+  document.getElementById('btnExportExcel').addEventListener('click', exportExcel);
+  document.getElementById('btnExportPDF').addEventListener('click', exportPDF);
+  document.getElementById('btnPrint').addEventListener('click', printSchedule);
+
+  // Filter selects & chips
+  document.getElementById('filterEmployee').addEventListener('change', (e) => {
+    filterState.employee = e.target.value;
+    renderScheduleTable();
+    renderMonthlyAssignments();   // re-mark active card
+  });
+  document.getElementById('filterShift').addEventListener('change', (e) => {
+    filterState.shift = e.target.value;
+    renderScheduleTable();
+  });
+  document.querySelectorAll('.filter-chip').forEach(b => {
+    b.addEventListener('click', () => {
+      filterState.mode = b.dataset.filter;
+      renderScheduleTable();
+    });
+  });
+
+  // Schedule table — single delegated change handler
+  document.getElementById('scheduleTable').addEventListener('change', onScheduleTableChange);
+
+  // Quick Apply controls
+  document.getElementById('qaPattern').addEventListener('change', updateQaSwatch);
+  document.getElementById('qaApply').addEventListener('click', () => {
+    const emp = document.getElementById('qaEmployee').value;
+    const pat = document.getElementById('qaPattern').value;
+    if (!emp || !pat) return;
+    applyRotationPattern(emp, pat);
+  });
+  document.getElementById('qaClearCell').addEventListener('click', () => {
+    const emp = document.getElementById('qaEmployee').value;
+    if (!emp) return;
+    clearEmployeeRotation(emp);
+  });
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+
+function init() {
+  populateMonthYear();
+  populateRotationControls();
+
+  const loaded = loadSchedule();
+  document.getElementById('monthSelect').value = state.month;
+  document.getElementById('yearSelect').value = state.year;
+
+  if (state.theme === 'dark') {
+    document.documentElement.dataset.theme = 'dark';
+    document.getElementById('themeToggle').textContent = '☀️';
+  }
+
+  wireEvents();
+
+  if (!loaded || Object.keys(state.schedule).length === 0) {
+    state.rotationMemory.monthCount =
+      ((state.year - 2026) * 12 + (state.month - 5) + 700) % EMPLOYEES.length;
+    generateSchedule();
+  } else {
+    // Re-sync derived data so the Monthly Assignments card always reflects the grid
+    syncPrimaryAssignments();
+    render();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
