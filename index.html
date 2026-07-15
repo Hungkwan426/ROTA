@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>[DXC] BUR & PF ROTA</title>
+<title>[DXC] EAO BUR & PF ROTA</title>
 <style>
 /* =====================================================================
    THEME VARIABLES
@@ -45,6 +45,7 @@
   --shift-rto:   #ffffff;   /* white — RTO */
   --shift-off:   #b0b0b0;   /* gray — OFF */
   --shift-ap-p:  #00b050;   /* AP-P → green (working) */
+  --shift-lv:    #f97316;   /* orange — VL (leave override) */
 
   /* Cell tints for Monthly Shift Assignment counts (light mode) */
   --tint-green:   rgba(0, 176, 80, 0.16);
@@ -426,53 +427,344 @@ a { color: var(--primary); }
 .section-title .hint { font-size: 12px; font-weight: 400; color: var(--text-muted); }
 
 /* =====================================================================
-   QUICK APPLY (Rotation Pattern Quick Apply)
+   CONFIG TABLES (Day Off / Rotation)
    ===================================================================== */
-.quick-apply-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  background: var(--bg);
+.config-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
   border-radius: 10px;
-  padding: 14px;
+  overflow: hidden;
   border: 1px solid var(--border);
+  margin-bottom: 14px;
 }
 
-.quick-apply-row .label {
-  font-size: 12px;
+.config-table thead th {
+  background: var(--bg);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-right: 4px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-strong);
+  white-space: nowrap;
 }
 
-.quick-apply-row select {
-  flex: 1 1 160px;
-  min-width: 160px;
+.config-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  vertical-align: middle;
 }
 
-.qa-swatch {
-  display: inline-flex;
+.config-table tbody tr:last-child td { border-bottom: none; }
+.config-table tbody tr:hover td { background: var(--hl-hover); }
+
+.config-table .config-emp {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.config-table .config-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.config-table .config-select {
+  width: 100%;
+  min-width: 200px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+.config-table .config-select:focus {
+  border-color: var(--hl-focus);
+  box-shadow: var(--hl-glow);
+}
+
+.config-table .config-swatch {
+  display: inline-block;
   padding: 4px 10px;
   border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.config-table .config-pill-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.config-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.config-summary .chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   color: white;
 }
+.config-summary .chip.ok { background: #10b981; }
+.config-summary .chip.warn { background: #f59e0b; }
 
-.qa-meta {
+.config-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.config-validation {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
   font-size: 12px;
-  color: var(--text-muted);
-  flex-basis: 100%;
-  margin-top: 4px;
+  font-weight: 600;
+  display: none;
+}
+.config-validation.show { display: block; }
+.config-validation.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+}
+.config-validation.success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #047857;
 }
 
 /* =====================================================================
-   MONTHLY ASSIGNMENTS PANEL
+   LEAVE REQUEST
+   ===================================================================== */
+.leave-config {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.leave-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.leave-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.leave-field select,
+.leave-field input[type="date"],
+.leave-field input[type="text"] {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  min-width: 0;
+  width: 100%;
+}
+.leave-field select:focus,
+.leave-field input[type="date"]:focus,
+.leave-field input[type="text"]:focus {
+  border-color: var(--hl-focus);
+  box-shadow: var(--hl-glow);
+}
+
+.leave-field .check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  min-height: 38px;
+}
+.leave-field .check-row input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+
+.leave-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.leave-validation {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  display: none;
+}
+.leave-validation.show { display: block; }
+.leave-validation.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #b91c1c;
+}
+.leave-validation.success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #047857;
+}
+
+.leave-table-wrap {
+  margin-top: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.leave-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.leave-table thead th {
+  background: var(--bg);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.leave-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.leave-table tbody tr:last-child td { border-bottom: none; }
+.leave-table tbody tr:hover td { background: var(--hl-hover); }
+
+.leave-table .leave-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+}
+
+.leave-table .approved-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.leave-table .approved-pill.pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.leave-table .row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.leave-table-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  background: var(--bg);
+}
+
+.leave-table-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.leave-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-right: auto;
+}
+
+@media (max-width: 600px) {
+  .leave-config {
+    grid-template-columns: 1fr;
+  }
+  .leave-table { font-size: 12px; }
+  .leave-table thead th,
+  .leave-table tbody td { padding: 8px; }
+}
+
+/* =====================================================================
+   COVERAGE BANNER
    ===================================================================== */
 .coverage-banner {
   padding: 12px 16px;
@@ -495,6 +787,11 @@ a { color: var(--primary); }
   border: 1px solid rgba(245, 158, 11, 0.25);
   color: #d97706;
 }
+.coverage-banner.info {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #4f46e5;
+}
 .coverage-banner .chip {
   display: inline-block;
   padding: 2px 10px;
@@ -502,103 +799,6 @@ a { color: var(--primary); }
   font-size: 11px;
   font-weight: 700;
   color: white;
-}
-
-.monthly-assignments {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 12px;
-}
-
-.assignment-card {
-  background: var(--bg);
-  border-radius: 12px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.2s;
-  position: relative;
-}
-.assignment-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-  border-color: var(--hl-focus);
-}
-
-/* Highlight the card for the employee currently selected in the filter */
-.assignment-card.is-active {
-  border-color: var(--hl-focus);
-  background: var(--hl-active);
-  box-shadow: 0 0 0 3px var(--hl-active-ring), var(--shadow);
-}
-
-.assignment-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  color: white;
-  flex-shrink: 0;
-  text-transform: uppercase;
-}
-
-.assignment-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.assignment-name {
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.assignment-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.assignment-shift {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-}
-
-.assignment-shift.secondary {
-  padding: 2px 7px;
-  font-size: 10px;
-  font-weight: 600;
-  opacity: 0.92;
-  letter-spacing: 0.02em;
-}
-
-.assignment-time {
-  display: block;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
-  font-weight: 500;
-}
-
-.assignment-time.also {
-  font-style: italic;
-  color: var(--text-muted);
-  opacity: 0.85;
 }
 
 /* =====================================================================
@@ -736,6 +936,7 @@ a { color: var(--primary); }
 .shift-rto    { background: var(--shift-rto);    color: var(--shift-rto-text, #0f172a); border: 1px solid var(--border-strong); }
 .shift-trng   { background: var(--shift-trng);   color: white; }
 .shift-oh     { background: var(--shift-oh);     color: var(--shift-oh-text, #0f172a); border: 1px solid var(--border-strong); }
+.shift-lv     { background: var(--shift-lv);     color: white; font-weight: 800; }
 .shift-empty  { background: transparent; color: var(--text-muted); }
 
 .cell-select option { background: white; color: black; padding: 4px; }
@@ -1068,290 +1269,6 @@ a { color: var(--primary); }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
 /* =====================================================================
-   LEAVE MANAGEMENT PANEL
-   ===================================================================== */
-.leave-panel {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.leave-toggle-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.leave-toggle-group {
-  display: inline-flex;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 4px;
-  gap: 4px;
-}
-
-.leave-toggle-btn {
-  padding: 8px 16px;
-  border-radius: 7px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-.leave-toggle-btn:hover { color: var(--text); background: var(--hl-hover); }
-.leave-toggle-btn.active {
-  background: var(--primary);
-  color: white;
-  box-shadow: var(--shadow);
-}
-
-.leave-config {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  align-items: end;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--border);
-}
-
-.leave-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.leave-field label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.leave-field select,
-.leave-field input[type="date"] {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-card);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  font-family: inherit;
-  min-width: 0;
-  width: 100%;
-}
-.leave-field select:focus,
-.leave-field input[type="date"]:focus {
-  border-color: var(--hl-focus);
-  box-shadow: var(--hl-glow);
-}
-
-.leave-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: end;
-}
-
-.leave-validation {
-  margin-top: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  display: none;
-}
-.leave-validation.show { display: block; }
-.leave-validation.error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #b91c1c;
-}
-.leave-validation.success {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #047857;
-}
-
-.leave-table-wrap {
-  margin-top: 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-  background: var(--bg-card);
-  display: none;
-}
-.leave-table-wrap.show { display: block; }
-
-.leave-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 13px;
-}
-
-.leave-table thead th {
-  background: var(--bg);
-  padding: 10px 12px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  border-bottom: 2px solid var(--border-strong);
-  white-space: nowrap;
-}
-
-.leave-table tbody td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  font-weight: 500;
-}
-
-.leave-table tbody tr:last-child td { border-bottom: none; }
-.leave-table tbody tr:hover td { background: var(--hl-hover); }
-
-.leave-table .leave-pill {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-}
-
-.leave-table .row-actions {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
-.leave-table-empty {
-  padding: 24px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-  background: var(--bg);
-}
-
-.leave-table-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.leave-summary {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-right: auto;
-}
-
-/* Temporary coverage pill in assignments panel */
-.assignment-coverage {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.assignment-coverage-title {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-.assignment-coverage-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  font-size: 11px;
-}
-.assignment-coverage-date {
-  font-weight: 600;
-  color: var(--text);
-}
-.assignment-coverage-shift {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
-}
-
-/* Primary shift display in assignments card */
-.assignment-primary-block {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 4px;
-}
-.assignment-primary-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.assignment-primary-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-/* Coverage summary banner */
-.coverage-banner .coverage-detail {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: 8px;
-}
-
-@media (max-width: 600px) {
-  .leave-config {
-    grid-template-columns: 1fr;
-  }
-  .leave-toggle-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .leave-toggle-group {
-    width: 100%;
-  }
-  .leave-toggle-btn {
-    flex: 1;
-    justify-content: center;
-  }
-  .leave-table { font-size: 12px; }
-  .leave-table thead th,
-  .leave-table tbody td { padding: 8px; }
-}
-
-/* =====================================================================
    PRINT
    ===================================================================== */
 @media print {
@@ -1379,12 +1296,10 @@ a { color: var(--primary); }
   .app-title { font-size: 18px; }
   .section { padding: 16px; }
   .dash-card .value { font-size: 22px; }
-  .monthly-assignments { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   .controls-panel { gap: 10px; }
 }
 
 @media (max-width: 768px) {
-  .monthly-assignments { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
   .section-title { font-size: 15px; }
   .schedule-table tbody td.sticky-col { left: 0; }
   .schedule-table tbody td.sticky-col-2 { left: 56px; }
@@ -1399,20 +1314,12 @@ a { color: var(--primary); }
   }
   .control-select, .control-input { flex: 1 1 100%; min-width: 0; }
   .filter-chip { flex: 1 1 auto; text-align: center; }
-  .monthly-assignments { grid-template-columns: 1fr; }
-  .quick-apply-row { flex-direction: column; align-items: stretch; }
-  .quick-apply-row select { width: 100%; }
-  .qa-meta { text-align: center; }
-  .table-wrap { max-height: 60vh; }
   .app-header { padding: 14px 12px; }
   .app-title { font-size: 16px; }
   .header-actions .btn { font-size: 12px; padding: 7px 12px; }
-  .assignment-card { padding: 12px; }
-  .assignment-avatar { width: 38px; height: 38px; font-size: 13px; }
 }
 
 @media (max-width: 420px) {
-  .monthly-assignments { gap: 10px; }
   .stats-table, .msa-table { font-size: 12px; }
 }
 
@@ -1467,16 +1374,16 @@ input:focus-visible {
     <div class="app-title">
       <div class="logo">📅</div>
       <div>
-        Rotation Scheduler
-        <small>BUR & PF ROTA</small>
+        BUR & PF ROTA
+        <small>Backup and Platforms Monthly Schedule</small>
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn btn-primary" id="btnGenerate" title="Regenerate the schedule for the current month (OH employee stays the same)">🎲 Generate Schedule</button>
-      <button class="btn btn-ghost" id="btnNextMonth" title="Advance to next month and rotate the OH employee">⏭ Next Month</button>
-      <button class="btn btn-ghost" id="btnReset" title="Reset rotation memory and clear data">↺ Reset</button>
-      <button class="btn btn-warning" id="btnClearEmployee" title="Clear the schedule for a specific employee" style="background: rgba(245, 158, 11, 0.85); color: white; border: 1px solid rgba(245, 158, 11, 0.9);">🧹 Clear Employee</button>
-      <button class="btn btn-danger" id="btnClearAll" title="Completely wipe schedule, employees, statistics and return to a blank state">🗑 Clear All</button>
+      <button class="btn btn-primary" id="btnCreateSchedule" title="Build the schedule from saved configurations">🛠 Create Schedule</button>
+      <button class="btn btn-ghost" id="btnClearSchedule" title="Clear the generated schedule (configurations are preserved)">🧹 Clear Schedule</button>
+      <button class="btn btn-ghost" id="btnNextMonth" title="Advance to next month">⏭ Next Month</button>
+      <button class="btn btn-ghost" id="btnPrevMonth" title="Go to previous month">⏮ Prev Month</button>
+      <button class="btn btn-danger" id="btnClearAll" title="Wipe every configuration and the generated schedule">🗑 Clear All</button>
       <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
     </div>
   </div>
@@ -1520,133 +1427,137 @@ input:focus-visible {
     <!-- cards injected by JS -->
   </section>
 
-  <!-- Rotation Pattern Quick Apply -->
+  <!-- ============================================================
+       MODULE 1 — Fixed Day Off Configuration
+       ============================================================ -->
   <section class="section">
     <div class="section-title">
-      <span>⚡ Rotation Pattern Quick Apply</span>
-      <span class="hint">Auto-fill an employee's month with a single shift — protects OFF / VL / EL / SL / ML / HOL / CO / OH / RTO / TRNG cells.</span>
+      <span>📆 Fixed Day Off Configuration</span>
+      <span class="hint">Each employee must have exactly two consecutive days off every week.</span>
     </div>
-    <div class="quick-apply-row">
-      <span class="label">Employee</span>
-      <select id="qaEmployee" class="control-select"></select>
-      <span class="label">Pattern</span>
-      <select id="qaPattern" class="control-select"></select>
-      <span id="qaSwatch" class="qa-swatch">AP-P</span>
-      <button class="btn btn-solid" id="qaApply">Apply Pattern</button>
-      <button class="btn btn-outline" id="qaClearCell" title="Reset all empty cells for this employee">Reset Pattern</button>
-      <span class="qa-meta">Tip: selecting <strong>EU-P</strong> populates every empty cell with EU-P, preserving OFF / leave / OH / RTO / TRNG cells.</span>
+
+    <div class="config-summary" id="dayOffSummary">
+      <span class="chip warn" id="dayOffSummaryChip">No employees configured</span>
+      <span id="dayOffSummaryText">Pick a recurring 2-day pair for every employee, then save.</span>
+    </div>
+
+    <table class="config-table" id="dayOffTable">
+      <thead>
+        <tr>
+          <th style="width: 50%;">Employee</th>
+          <th>Recurring Weekly Day Off</th>
+        </tr>
+      </thead>
+      <tbody id="dayOffTableBody"></tbody>
+    </table>
+
+    <div class="config-validation" id="dayOffValidation"></div>
+
+    <div class="config-actions">
+      <button class="btn btn-solid" id="btnSaveDayOff">💾 Save Fixed Day Off Configuration</button>
+      <button class="btn btn-outline" id="btnClearDayOff">🗑 Clear All</button>
     </div>
   </section>
 
-  <!-- Filler & OH-Lock Configuration -->
+  <!-- ============================================================
+       MODULE 2 — Rotation Pattern
+       ============================================================ -->
   <section class="section">
     <div class="section-title">
-      <span>🛟 Filler &amp; OH-Lock Configuration</span>
-      <span class="hint">Designate 2 or 3 fillers (leave-only coverage for AP-PB / EU-P / EU-B / NA-P / NA-B).</span>
+      <span>🔁 Rotation Pattern</span>
+      <span class="hint">Each employee has one default shift used to populate working days.</span>
     </div>
-    <div class="quick-apply-row" style="align-items:center;">
-      <span class="label">Filler Count</span>
-      <select id="fillerCountSelect" class="control-select">
-        <option value="2">2 fillers</option>
-        <option value="3">3 fillers</option>
-      </select>
-      <span class="label">Cindy OH Override</span>
-      <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;">
-        <input type="checkbox" id="cindyOhOverrideToggle" />
-        Exclude Cindy Halasan from being OH this month
-      </label>
-      <button class="btn btn-solid" id="btnRegenerateWithFillers" title="Regenerate the schedule using the new filler count and Cindy OH override.">🔄 Regenerate with New Rules</button>
-      <span class="qa-meta">
-        <strong>How fillers work now:</strong> 2-3 employees are designated as fillers each month. They cover <strong>only</strong> AP-PB / EU-P / EU-B / NA-P / NA-B — <strong>only when</strong> the assigned employee for that shift is on approved leave <strong>and</strong> the filler's own schedule allows (not OFF, not on leave). Natural OFF-day gaps are left for temp coverage. <strong>AP-PB</strong> is never split into AP-P / AP-B.
-      </span>
+
+    <div class="config-summary" id="rotationSummary">
+      <span class="chip warn" id="rotationSummaryChip">No employees configured</span>
+      <span id="rotationSummaryText">Pick a default shift for every employee, then save.</span>
+    </div>
+
+    <table class="config-table" id="rotationTable">
+      <thead>
+        <tr>
+          <th style="width: 50%;">Employee</th>
+          <th>Default Shift</th>
+        </tr>
+      </thead>
+      <tbody id="rotationTableBody"></tbody>
+    </table>
+
+    <div class="config-validation" id="rotationValidation"></div>
+
+    <div class="config-actions">
+      <button class="btn btn-solid" id="btnSaveRotation">💾 Save Rotation Pattern</button>
+      <button class="btn btn-outline" id="btnClearRotation">🗑 Clear All</button>
     </div>
   </section>
 
-  <!-- Monthly Assignments (cards) — READS LIVE FROM SCHEDULE -->
+  <!-- ============================================================
+       MODULE 3 — Leave Request
+       ============================================================ -->
   <section class="section">
     <div class="section-title">
-      <span>👥 Monthly Shift Assignments</span>
-      <span class="hint">Each card mirrors the schedule grid — live updates as you edit cells.</span>
-    </div>
-    <div id="coverageBanner" class="coverage-banner ok">
-      <span id="coverageText">✓ All primary shifts covered</span>
-    </div>
-    <div class="monthly-assignments" id="monthlyAssignments">
-      <!-- cards injected by JS -->
-    </div>
-  </section>
-
-  <!-- Leave Management Panel -->
-  <section class="section">
-    <div class="section-title">
-      <span>🌴 Leave Request Configuration</span>
-      <span class="hint">Define approved leave requests before generating the schedule. Temporary shift coverage is only created when a leave request causes a shift to become understaffed.</span>
+      <span>🌴 Leave Request</span>
+      <span class="hint">Approved leave overrides all other assignments. Only approved leave is rendered as <strong>VL</strong> in the schedule.</span>
     </div>
 
-    <div class="leave-panel">
-      <div class="leave-toggle-row">
-        <span class="control-label" style="margin-right:8px;">Leave Requests</span>
-        <div class="leave-toggle-group" role="tablist">
-          <button class="leave-toggle-btn active" id="leaveToggleNone" data-leave-mode="none">☐ No Leave Requests</button>
-          <button class="leave-toggle-btn" id="leaveToggleWith" data-leave-mode="with">☑ With Leave Requests</button>
-        </div>
-        <span class="hint" style="font-size:12px;color:var(--text-muted);margin-left:8px;" id="leaveModeHint">Standard schedule — every employee keeps one primary shift for the whole month.</span>
+    <div class="leave-config">
+      <div class="leave-field">
+        <label for="leaveEmployee">Employee</label>
+        <select id="leaveEmployee"></select>
       </div>
-
-      <div id="leaveConfigPanel" style="display:none;">
-        <div class="leave-config">
-          <div class="leave-field">
-            <label for="leaveEmployee">Employee</label>
-            <select id="leaveEmployee"></select>
-          </div>
-          <div class="leave-field">
-            <label for="leaveType">Leave Type</label>
-            <select id="leaveType">
-              <option value="VL">VL — Vacation Leave</option>
-              <option value="SL">SL — Sick Leave</option>
-              <option value="EL">EL — Emergency Leave</option>
-              <option value="ML">ML — Maternity Leave</option>
-              <option value="HL">HL — Holiday Leave</option>
-              <option value="COL">COL — Compensatory Off Leave</option>
-            </select>
-          </div>
-          <div class="leave-field">
-            <label for="leaveStart">Start Date</label>
-            <input type="date" id="leaveStart" />
-          </div>
-          <div class="leave-field">
-            <label for="leaveEnd">End Date</label>
-            <input type="date" id="leaveEnd" />
-          </div>
-          <div class="leave-actions">
-            <button class="btn btn-solid" id="btnAddLeave">➕ Add Leave</button>
-            <button class="btn btn-outline" id="btnCancelEditLeave" style="display:none;">Cancel Edit</button>
-          </div>
-        </div>
-
-        <div class="leave-validation" id="leaveValidation"></div>
-
-        <div class="leave-table-wrap" id="leaveTableWrap">
-          <table class="leave-table" id="leaveTable">
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Leave Type</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Duration</th>
-                <th style="text-align:right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="leaveTableBody"></tbody>
-          </table>
-        </div>
-
-        <div class="leave-table-actions" id="leaveTableActions" style="display:none;">
-          <span class="leave-summary" id="leaveSummary">No leave requests yet</span>
-          <button class="btn btn-outline" id="btnClearAllLeaves">🗑 Clear All</button>
-        </div>
+      <div class="leave-field">
+        <label for="leaveDate">Leave Date</label>
+        <input type="date" id="leaveDate" />
       </div>
+      <div class="leave-field">
+        <label for="leaveType">Leave Type</label>
+        <select id="leaveType">
+          <option value="VL">VL — Vacation Leave</option>
+          <option value="SL">SL — Sick Leave</option>
+          <option value="EL">EL — Emergency Leave</option>
+          <option value="ML">ML — Maternity Leave</option>
+          <option value="HL">HL — Holiday Leave</option>
+          <option value="COL">COL — Compensatory Off Leave</option>
+        </select>
+      </div>
+      <div class="leave-field">
+        <label for="leaveReason">Reason</label>
+        <input type="text" id="leaveReason" maxlength="120" placeholder="(optional)" />
+      </div>
+      <div class="leave-field">
+        <label for="leaveApproved">Approved</label>
+        <label class="check-row">
+          <input type="checkbox" id="leaveApproved" />
+          <span>Approved leave is rendered as VL</span>
+        </label>
+      </div>
+      <div class="leave-actions">
+        <button class="btn btn-solid" id="btnAddLeave">➕ Add / Save</button>
+        <button class="btn btn-outline" id="btnCancelEditLeave" style="display:none;">Cancel Edit</button>
+      </div>
+    </div>
+
+    <div class="leave-validation" id="leaveValidation"></div>
+
+    <div class="leave-table-wrap" id="leaveTableWrap">
+      <table class="leave-table" id="leaveTable">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Date</th>
+            <th>Leave Type</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="leaveTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="leave-table-actions" id="leaveTableActions" style="display:none;">
+      <span class="leave-summary" id="leaveSummary">No leave requests yet</span>
+      <button class="btn btn-outline" id="btnClearAllLeaves">🗑 Clear All</button>
     </div>
   </section>
 
@@ -1655,6 +1566,9 @@ input:focus-visible {
     <div class="section-title">
       <span>📋 <span id="scheduleMonthLabel">Monthly Schedule</span></span>
       <span class="hint">Click any cell to override a single day • Auto-saved to browser storage</span>
+    </div>
+    <div id="scheduleStatusBanner" class="coverage-banner info">
+      <span id="scheduleStatusText">No schedule generated yet. Configure day off, rotation, and leave requests, then click <strong>Create Schedule</strong>.</span>
     </div>
     <div class="table-wrap">
       <table class="schedule-table" id="scheduleTable"></table>
@@ -1687,7 +1601,7 @@ input:focus-visible {
   <section class="section legend-section">
     <div class="section-title">
       <span>🎨 Shift Legend</span>
-      <span class="hint"><span style="color:#00b050">●</span> Working &nbsp; <span style="color:#4f86f7">●</span> EU-P &nbsp; <span style="color:#ff8c2a">●</span> NA-P &nbsp; <span style="color:#b0b0b0">●</span> OFF</span>
+      <span class="hint"><span style="color:#00b050">●</span> Working &nbsp; <span style="color:#4f86f7">●</span> EU-P &nbsp; <span style="color:#ff8c2a">●</span> NA-P &nbsp; <span style="color:#b0b0b0">●</span> OFF &nbsp; <span style="color:#f97316">●</span> VL</span>
     </div>
     <div class="legend" id="legend"></div>
   </section>
@@ -1709,38 +1623,49 @@ input:focus-visible {
   </div>
 </div>
 
-<!-- Clear Employee modal -->
-<div class="modal-backdrop" id="clearEmployeeModal">
-  <div class="modal" style="max-width: 480px;">
-    <h3>🧹 Clear Employee Schedule</h3>
-    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
-      Select an employee to clear their schedule. Locked cells (OFF, VL, EL, SL, ML, HOL, CO, OH, RTO, TRNG) will be preserved.
-    </p>
-    <div class="leave-field" style="margin-bottom: 16px;">
-      <label for="clearEmployeeSelect">Employee</label>
-      <select id="clearEmployeeSelect" style="padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text); font-size: 14px; font-weight: 500; outline: none; width: 100%;">
-        <!-- Options populated by JS -->
-      </select>
-    </div>
-    <div id="clearEmployeePreview" style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 12px; display: none;">
-      <div style="font-weight: 700; margin-bottom: 6px; color: var(--text);">Current schedule summary:</div>
-      <div id="clearEmployeePreviewContent" style="color: var(--text-muted);"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn" id="clearEmployeeCancel">Cancel</button>
-      <button class="modal-btn danger" id="clearEmployeeConfirm">🧹 Clear Schedule</button>
-    </div>
-  </div>
-</div>
-
 <!-- SheetJS (community fork with cell styling support) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
 <script>
 /* =====================================================================
-   CONSTANTS & CONFIG
+   CONFIGURATION-DRIVEN SCHEDULER v4
+   ---------------------------------------------------------------------
+   The schedule is built ONLY from three saved configurations:
+
+     1. Fixed Day Off Configuration  → recurring 2-day consecutive weekly off
+     2. Rotation Pattern              → one default shift per employee
+     3. Leave Request                 → approved leave renders as VL
+
+   There is NO random scheduling, NO balancing, NO auto rotation.
+   Pressing "Create Schedule" simply reads the saved configurations
+   and populates the calendar with these priority rules:
+
+     Rule 1 — Approved leave      → VL
+     Rule 2 — Recurring weekly off → OFF
+     Rule 3 — Default rotation    → saved shift
+
+   Module structure:
+     • initializeApplication()
+     • loadSavedConfigurations()
+     • saveDayOffConfiguration()
+     • loadDayOffConfiguration()
+     • saveRotationPattern()
+     • loadRotationPattern()
+     • saveLeaveRequests()
+     • loadLeaveRequests()
+     • generateSchedule()
+     • clearSchedule()
+     • validateConfiguration()
+     • renderSchedule()
+     • saveToStorage()
+     • loadFromStorage()
    ===================================================================== */
 
+/* =====================================================================
+   CONSTANTS
+   ===================================================================== */
+
+/** Master employee list — preserved from the original app. */
 const EMPLOYEES = [
   'Cindy Halasan',
   'Jennyvee Gonzales',
@@ -1751,36 +1676,53 @@ const EMPLOYEES = [
   'Joshua Pitapit'
 ];
 
-// All shift codes — used in dropdowns, counts, exports and CSA
+/** Shift codes rendered in the schedule. "VL" is the leave override. */
 const SHIFT_CODES = [
   'AP-P', 'AP-B', 'AP-PB',
   'EU-P', 'EU-B', 'EU-PB',
   'NA-P', 'NA-B', 'NA-PB',
-  'OH', 'FILLER', 'OFF',
+  'OH', 'OFF', 'VL',
   'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
   'RTO', 'TRNG'
 ];
 
-/**
- * Shift codes considered "locked" by the rotation-pattern auto-fill.
- * Cells already containing any of these values are NEVER overwritten.
- */
-const LOCKED_SHIFTS = new Set([
-  'OFF', 'VL', 'EL', 'SL', 'ML', 'HOL', 'CO', 'OH', 'RTO', 'TRNG'
-]);
+/** Valid options for the Fixed Day Off Configuration dropdown. */
+const DAY_OFF_PAIRS = [
+  { code: 'Mon-Tue', label: 'Monday – Tuesday',    startIdx: 1 },
+  { code: 'Tue-Wed', label: 'Tuesday – Wednesday', startIdx: 2 },
+  { code: 'Wed-Thu', label: 'Wednesday – Thursday', startIdx: 3 },
+  { code: 'Thu-Fri', label: 'Thursday – Friday',    startIdx: 4 },
+  { code: 'Fri-Sat', label: 'Friday – Saturday',    startIdx: 5 },
+  { code: 'Sat-Sun', label: 'Saturday – Sunday',    startIdx: 6 },
+  { code: 'Sun-Mon', label: 'Sunday – Monday',      startIdx: 0 }
+];
 
-// Hours per shift
+/** Valid options for the Rotation Pattern dropdown. */
+const ROTATION_OPTIONS = [
+  'AP-PB', 'EU-P', 'EU-B', 'NA-P', 'NA-B', 'OH', 'OFF'
+];
+
+/** Leave types offered in the Leave Request form. */
+const LEAVE_TYPES = [
+  { code: 'VL',  label: 'Vacation Leave' },
+  { code: 'SL',  label: 'Sick Leave' },
+  { code: 'EL',  label: 'Emergency Leave' },
+  { code: 'ML',  label: 'Maternity Leave' },
+  { code: 'HL',  label: 'Holiday Leave' },
+  { code: 'COL', label: 'Compensatory Off Leave' }
+];
+
+/** Hours per shift (VL counts as 0 hours but renders in stats). */
 const SHIFT_HOURS = {
-  'AP-P': 8,  'AP-B': 8,
-  'EU-P': 8,  'EU-B': 8,
-  'NA-P': 8,  'NA-B': 8,
-  'AP-PB': 8, 'EU-PB': 8, 'NA-PB': 8,
-  'OH':    8, 'FILLER': 8,
-  'OFF':   0, 'VL': 8, 'EL': 8, 'SL': 8, 'ML': 8, 'HOL': 8, 'CO': 8,
-  'RTO':   8, 'TRNG': 8
+  'AP-P': 8,  'AP-B': 8,   'AP-PB': 8,
+  'EU-P': 8,  'EU-B': 8,   'EU-PB': 8,
+  'NA-P': 8,  'NA-B': 8,   'NA-PB': 8,
+  'OH':    8, 'OFF':   0,  'VL':    0,
+  'VL': 8, 'EL': 8, 'SL': 8, 'ML': 8, 'HOL': 8, 'CO': 8,
+  'RTO': 8, 'TRNG': 8
 };
 
-// Shift time windows (display + coverage logic)
+/** Display labels for shift time windows. */
 const SHIFT_TIMES = {
   'AP-P':  '7 AM – 3 PM',
   'AP-B':  '7 AM – 3 PM (Back)',
@@ -1792,8 +1734,8 @@ const SHIFT_TIMES = {
   'EU-PB': '3 PM – 11 PM',
   'NA-PB': '11 PM – 7 AM',
   'OH':    '9 AM – 6 PM',
-  'FILLER': 'Flexible / On-Call',
   'OFF':   'Rest day',
+  'VL':    'Approved Leave',
   'VL':    'Vacation Leave',
   'EL':    'Emergency Leave',
   'SL':    'Sick Leave',
@@ -1804,33 +1746,15 @@ const SHIFT_TIMES = {
   'TRNG':  'Training'
 };
 
-// Color bucket (used by legends / coverage / sorting)
+/** Bucket for sort/grouping in MSA. */
 const SHIFT_BUCKET = {
-  'AP-P': 'morning', 'AP-B': 'morning',
-  'EU-P': 'evening', 'EU-B': 'evening',
-  'NA-P': 'night',   'NA-B': 'night',
-  'AP-PB': 'morning', 'EU-PB': 'evening', 'NA-PB': 'night',
-  'OH':    'day',
-  'FILLER': 'day',
-  'OFF':   'off',
-  'VL':    'leave',  'EL':    'leave',
-  'SL':    'leave',  'ML':    'leave',
-  'HOL':   'leave',  'CO':    'leave',
-  'RTO':   'day',    'TRNG':  'day'
-};
-
-const SHIFT_COLOR_KIND = {
-  'AP-P': 'green', 'AP-B': 'red',
-  'EU-P': 'green', 'EU-B': 'red',
-  'NA-P': 'green', 'NA-B': 'red',
-  'AP-PB': 'green', 'EU-PB': 'green', 'NA-PB': 'green',
-  'OH':    'green',
-  'FILLER': 'purple',
-  'OFF':   'yellow',
-  'VL':    'yellow', 'EL': 'yellow', 'SL': 'yellow',
-  'ML':    'yellow', 'HOL': 'yellow', 'CO': 'yellow',
-  'RTO':   'cyan',
-  'TRNG':  'purple'
+  'AP-P': 'morning', 'AP-B': 'morning', 'AP-PB': 'morning',
+  'EU-P': 'evening', 'EU-B': 'evening', 'EU-PB': 'evening',
+  'NA-P': 'night',   'NA-B': 'night',   'NA-PB': 'night',
+  'OH': 'day', 'OFF': 'off', 'VL': 'leave',
+  'VL': 'leave', 'EL': 'leave', 'SL': 'leave',
+  'ML': 'leave', 'HOL': 'leave', 'CO': 'leave',
+  'RTO': 'day', 'TRNG': 'day'
 };
 
 const MONTH_NAMES = [
@@ -1841,1092 +1765,47 @@ const MONTH_NAMES_SHORT = [
   'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
 ];
 const DAY_NAMES_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_NAMES_LONG  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-// Rotation-pattern candidates offered in the Quick-Apply dropdown.
-const ROTATION_PATTERNS = [
-  'AP-P','AP-B','EU-P','EU-B','NA-P','NA-B',
-  'AP-PB','EU-PB','NA-PB','OH','FILLER'
-];
-
-/* =====================================================================
-   SCHEDULING ENGINE v2 — PRIMARY SHIFT ROTATION + LEAVE HANDLING
-   ---------------------------------------------------------------------
-   Modular functions matching the new spec:
-     • assignMonthlyPrimaryShifts()   — fair rotation per month (7 emps → 6 shifts)
-     • pickFairOH()                   — pick who is OH for the month
-     • pickFairDuoShift()             — which working shift gets 2 employees
-     • pickBestShiftForEmployee()     — fairest shift for a given employee
-     • distributeOffDaysForPrimaries()— distribute OFFs fairly across all emps
-     • buildPrimarySchedule()         — base schedule with primaries + OFFs
-     • applyLeaveRequestsToSchedule() — replace days with leave codes (locked)
-     • processTemporaryCoverage()     — create temp coverage only when needed
-     • validateWeeklyOFF()            — 2 OFF per week enforcement (best effort)
-     • rebalanceDay()                 — repair one day after manual edits
-     • generateMonthlySchedule()      — main entry: build the full month
-   ===================================================================== */
-
-// Only these shifts are used for new schedules (per spec).
-const NEW_PRIMARY_SHIFTS = ['AP-PB', 'EU-P', 'EU-B', 'NA-P', 'NA-B', 'OH'];
-// One of the 5 working shifts gets a "duo" (2 employees) since we have 7
-// employees and 6 unique primary shifts. The duo rotates fairly each month.
-const WORKING_PRIMARY_SHIFTS = ['AP-PB', 'EU-P', 'EU-B', 'NA-P', 'NA-B'];
-
-// Codes that are LOCKED — temporary coverage and other operations must never overwrite.
-const LOCKED_CODES = new Set(['OFF', 'VL', 'EL', 'SL', 'ML', 'HL', 'COL', 'TRNG', 'RTO', 'OH']);
-
-// Leave codes — they replace the scheduled value, are preserved across rebalance.
-const LEAVE_CODES = new Set(['VL', 'SL', 'EL', 'ML', 'HL', 'COL', 'HOL', 'CO']);
-
-// NA shifts — used to enforce the "no NA → AP-PB next day" rule.
-const NA_SET = new Set(['NA-P', 'NA-B']);
-
-// Daily staffing: each working shift + OH + OFF (the spec's required slots).
-const REQUIRED_WORKING_SHIFTS = ['AP-PB', 'EU-P', 'EU-B', 'NA-P', 'NA-B'];
-
-/* ---------- helpers ---------- */
-
-function _dk(d, year, month) {
-  return `${year}-${pad2(month + 1)}-${pad2(d)}`;
-}
-
-function _emptyCounts() {
-  const out = {};
-  for (const e of EMPLOYEES) out[e] = {};
-  return out;
-}
-
-function _bump(counts, emp, shift) {
-  if (!counts[emp]) counts[emp] = {};
-  counts[emp][shift] = (counts[emp][shift] || 0) + 1;
-}
-
-/* ---------- Step 1: Primary Shift Rotation ---------- */
-
-/**
- * Find the most recent rotation entry strictly before (year, month).
- * Used to drive the fair rotation algorithm.
- */
-function findPriorMonthEntry(year, month, history) {
-  if (!history || history.length === 0) return null;
-  const target = year * 12 + month;
-  let best = null;
-  let bestDate = -1;
-  for (const h of history) {
-    const d = h.year * 12 + h.month;
-    if (d < target && d > bestDate) {
-      best = h;
-      bestDate = d;
-    }
-  }
-  return best;
-}
-
-/**
- * Pick the OH employee for the month using fair rotation:
- *   1. Avoid the same employee as last month if possible.
- *   2. Among non-recent OH holders, pick the one whose last OH assignment
- *      is oldest (or has never been OH).
- *   3. If state.cindyOhOverride is true, Cindy Halasan is excluded from
- *      being OH for the current month (her "locked time slot" is removed).
- */
-function pickFairOH(lastEntry, history) {
-  const lastOH = lastEntry?.ohEmployee;
-  let candidates = EMPLOYEES.filter(e => e !== lastOH);
-
-  // Exclude Cindy from OH this month if the override is on
-  // (the user requested removing her locked OH slot).
-  if (state.cindyOhOverride) {
-    candidates = candidates.filter(e => e !== 'Cindy Halasan');
-  }
-
-  // Track how recently each employee was OH
-  const ohWhen = {};
-  for (const h of history) {
-    if (h.ohEmployee) {
-      const d = h.year * 12 + h.month;
-      if (!ohWhen[h.ohEmployee] || d > ohWhen[h.ohEmployee]) {
-        ohWhen[h.ohEmployee] = d;
-      }
-    }
-  }
-
-  // Sort by least recent OH (oldest first, never-OH first)
-  candidates.sort((a, b) => (ohWhen[a] || -1) - (ohWhen[b] || -1));
-  return candidates[0] || EMPLOYEES[0];
-}
-
-/**
- * Pick which working shift gets 2 employees (the "duo") this month.
- * Rotates fairly — shifts that have been duo'd least recently get picked.
- */
-function pickFairDuoShift(history) {
-  const duoCount = {};
-  for (const h of history) {
-    if (h.duoShift) {
-      duoCount[h.duoShift] = (duoCount[h.duoShift] || 0) + 1;
-    }
-  }
-  const sorted = [...WORKING_PRIMARY_SHIFTS].sort((a, b) =>
-    (duoCount[a] || 0) - (duoCount[b] || 0)
-  );
-  return sorted[0] || 'NA-B';
-}
-
-/**
- * Pick the FILLER employees for the month using fair rotation.
- * The designated fillers step in for colleagues ONLY when those
- * colleagues go on approved leave, and ONLY when the filler's own
- * schedule permits (not OFF, not on leave themselves, not already
- * covering a different shift that day).
- *
- * Per the new rules:
- *   • Designate 2 or 3 fillers per month (configurable via
- *     state.fillerCount — defaults to 3).
- *   • Fillers cover ONLY these shifts: AP-PB / EU-P / EU-B / NA-P / NA-B
- *     (the OH / EU-PB / NA-PB shifts are NEVER taken over by a filler).
- *   • AP-PB is NEVER split into AP-P or AP-B when generating.
- *   • Fillers are restricted to employees whose primary shift falls in
- *     the same restricted pool (AP-PB or EU-P/B or NA-P/B) so a filler
- *     is always eligible to cover any working shift.
- *
- *   1. Avoid the same employees as last month if possible.
- *   2. NEVER pick the current OH holder as a filler.
- *   3. Among non-recent fillers, pick the ones whose last filler
- *      assignment is oldest (or has never been filler).
- *
- * @param {Object}  lastEntry    Last month’s rotation history entry
- * @param {Array}   history      Full rotation history
- * @param {string}  ohEmployee   The OH employee already picked for this month
- * @param {number}  count        How many fillers to pick (default state.fillerCount)
- * @returns {string[]}           Array of distinct employee names
- */
-function pickFairFiller(lastEntry, history, ohEmployee, count) {
-  const targetCount = Math.max(2, Math.min(3, count || state.fillerCount || 3));
-  const lastFillers = (lastEntry?.fillerEmployees && lastEntry.fillerEmployees.length)
-    ? lastEntry.fillerEmployees
-    : (lastEntry?.fillerEmployee ? [lastEntry.fillerEmployee] : []);
-
-  // Track how recently each employee was filler (across history)
-  const fillerWhen = {};
-  for (const h of history) {
-    const d = h.year * 12 + h.month;
-    const list = (h.fillerEmployees && h.fillerEmployees.length)
-      ? h.fillerEmployees
-      : (h.fillerEmployee ? [h.fillerEmployee] : []);
-    for (const f of list) {
-      if (!fillerWhen[f] || d > fillerWhen[f]) fillerWhen[f] = d;
-    }
-  }
-
-  const candidates = EMPLOYEES.filter(e => e !== ohEmployee);
-
-  // Sort by least recent filler (oldest first, never-filler first)
-  candidates.sort((a, b) => (fillerWhen[a] || -1) - (fillerWhen[b] || -1));
-
-  // Prefer not to repeat last month's fillers (try to rotate), but fall
-  // back to them if we don't have enough fresh candidates.
-  const fresh   = candidates.filter(e => !lastFillers.includes(e));
-  const pool    = fresh.length >= targetCount ? fresh : candidates;
-  const picked  = pool.slice(0, targetCount);
-
-  // Last-resort pad: if we somehow picked fewer than targetCount, pad
-  // from remaining employees (skip OH).
-  if (picked.length < targetCount) {
-    for (const e of EMPLOYEES) {
-      if (picked.length >= targetCount) break;
-      if (e === ohEmployee) continue;
-      if (!picked.includes(e)) picked.push(e);
-    }
-  }
-  return picked.slice(0, targetCount);
-}
-
-/**
- * Get the most recent date an employee was assigned to a particular shift.
- * Returns -Infinity if the employee was never on this shift.
- */
-function getShiftDate(emp, shift, history) {
-  let latest = -Infinity;
-  for (const h of history) {
-    if (h.assignments && h.assignments[emp] === shift) {
-      const d = h.year * 12 + h.month;
-      if (d > latest) latest = d;
-    }
-  }
-  return latest;
-}
-
-/**
- * Pick the best shift for an employee from a pool of available shifts.
- * Uses rotation history (least recently on this shift first). If the
- * employee has no history, round-robins based on employee index.
- */
-function pickBestShiftForEmployee(emp, availableShifts, history) {
-  if (!availableShifts || availableShifts.length === 0) return null;
-
-  // Find shifts the employee has had before
-  const empHistory = {};
-  for (const h of history) {
-    if (h.assignments && h.assignments[emp]) {
-      const s = h.assignments[emp];
-      const d = h.year * 12 + h.month;
-      if (empHistory[s] === undefined || d > empHistory[s]) {
-        empHistory[s] = d;
-      }
-    }
-  }
-
-  const empIdx = EMPLOYEES.indexOf(emp);
-
-  // If the employee has history, pick the oldest one (or a never-had one)
-  const sorted = [...availableShifts].sort((a, b) => {
-    const aHas = empHistory[a] !== undefined;
-    const bHas = empHistory[b] !== undefined;
-    if (aHas && !bHas) return -1;
-    if (!aHas && bHas) return 1;
-    if (aHas && bHas) return (empHistory[a] || 0) - (empHistory[b] || 0);
-    // Both never had — use employee index as deterministic tiebreaker
-    return (availableShifts.indexOf(a) - availableShifts.indexOf(b));
-  });
-
-  // No history: cycle deterministically by employee index
-  if (Object.keys(empHistory).length === 0) {
-    return availableShifts[empIdx % availableShifts.length];
-  }
-
-  return sorted[0];
-}
-
-/**
- * Step 1: Assign monthly primary shifts.
- * Returns { ohEmployee, duoShift, fillerEmployees: [emp, ...], assignments: { emp: shift } }.
- *
- * Algorithm:
- *   1. Pick OH (avoid last month's OH, prefer oldest OH holder).
- *      Cindy Halasan is excluded from being OH if state.cindyOhOverride is on.
- *   2. Pick 2 or 3 FILLER employees (fair rotation, separate from OH).
- *      The filler pool size is state.fillerCount (2 or 3, default 3).
- *   3. Pick the "duo" shift (rotates fairly over time).
- *   4. Assign remaining employees to the 5 working shifts (with the
- *      duo shift having 2 employees). Use rotation history to choose
- *      fairly — each employee tends to get a different shift each month.
- *
- * Per the spec:
- *   • AP-PB is a single combined shift — NEVER split into AP-P / AP-B
- *     during generation. The restricted working pool is
- *     [AP-PB, EU-P, EU-B, NA-P, NA-B] and stays exactly that.
- *   • Fillers are restricted to that same pool so they can cover any
- *     working shift when needed.
- */
-function assignMonthlyPrimaryShifts(year, month) {
-  if (!state.rotationHistory) state.rotationHistory = [];
-  const history = state.rotationHistory;
-  const lastEntry = findPriorMonthEntry(year, month, history);
-
-  // Pick OH (Cindy excluded if state.cindyOhOverride is true)
-  const ohEmployee = pickFairOH(lastEntry, history);
-
-  // Pick 2 or 3 fillers (state.fillerCount)
-  const fillerCount = Math.max(2, Math.min(3, state.fillerCount || 3));
-  const fillerEmployees = pickFairFiller(lastEntry, history, ohEmployee, fillerCount);
-  // Persist to state immediately so downstream steps can read it.
-  state.fillerEmployees = fillerEmployees;
-
-  // Pick duo shift
-  const duoShift = pickFairDuoShift(history);
-
-  // Build assignments
-  const assignments = {};
-  assignments[ohEmployee] = 'OH';
-
-  // Remaining employees (6 of them — including all the fillers) all get
-  // working shifts from the restricted pool. One shift will end up
-  // with two owners (the fair "duo" shift) so all 6 fit into the
-  // 5 unique working shifts.
-  const remaining = EMPLOYEES.filter(e => e !== ohEmployee);
-
-  // Sort remaining by staleness (longest-ago first → more flexibility)
-  const empStaleness = {};
-  for (const h of history) {
-    if (h.assignments) {
-      const d = h.year * 12 + h.month;
-      for (const emp in h.assignments) {
-        if (empStaleness[emp] === undefined || d > empStaleness[emp]) {
-          empStaleness[emp] = d;
-        }
-      }
-    }
-  }
-  remaining.sort((a, b) => (empStaleness[a] ?? -Infinity) - (empStaleness[b] ?? -Infinity));
-
-  // Track how many times each shift has been assigned (so the duo gets exactly 2)
-  const shiftCount = {};
-  for (const s of WORKING_PRIMARY_SHIFTS) shiftCount[s] = 0;
-
-  // Assign each remaining employee their best available shift
-  for (const emp of remaining) {
-    // Available: shifts that haven't reached their max count (1 for normal, 2 for duo)
-    const candidates = WORKING_PRIMARY_SHIFTS.filter(s => {
-      const max = (s === duoShift) ? 2 : 1;
-      return shiftCount[s] < max;
-    });
-    const shift = pickBestShiftForEmployee(emp, candidates, history);
-    assignments[emp] = shift;
-    shiftCount[shift] = (shiftCount[shift] || 0) + 1;
-  }
-
-  return { ohEmployee, duoShift, fillerEmployees, assignments };
-}
-
-/* ---------- Step 2: OFF Day Distribution ---------- */
-
-/**
- * Distribute OFF days so that EVERY employee (including the filler)
- * follows a strict 5-on / 2-off pattern that NEVER produces a 6-day
- * work week.
- *
- * Layout:
- *   - The OFF cycle is anchored on day 1 of the month and repeats
- *     every 7 days.
- *   - For absolute day d in the month, cycleDay = (d - 1) mod 7 (0..6).
- *   - Employee i has an OFF-block at cycleDays { i, (i + 1) mod 7 },
- *     giving two CONSECUTIVE OFF days per cycle and a work-block of
- *     5 consecutive days in between.
- *
- *     With 7 employees (i = 0..6):
- *       Emp 0 → cycleDays {0, 1}   → days 1–2, 8–9, 15–16, 22–23, 29–30
- *       Emp 1 → cycleDays {1, 2}   → days 2–3, 9–10, 16–17, 23–24, 30–31
- *       Emp 2 → cycleDays {2, 3}   → days 3–4, 10–11, 17–18, 24–25
- *       Emp 3 → cycleDays {3, 4}   → days 4–5, 11–12, 18–19, 25–26
- *       Emp 4 → cycleDays {4, 5}   → days 5–6, 12–13, 19–20, 26–27
- *       Emp 5 → cycleDays {5, 6}   → days 6–7, 13–14, 20–21, 27–28
- *       Emp 6 → cycleDays {6, 0}   → days 7–8, 14–15, 21–22, 28–29
- *
- * Properties guaranteed:
- *   - Every employee works exactly 5 CONSECUTIVE days then has exactly
- *     2 CONSECUTIVE OFF days (5-on/2-off), repeating every 7 days.
- *   - NO 6-day work weeks are possible: an employee's longest work
- *     streak between off-blocks is bounded by the size of the gap
- *     between their own off-block and the next one, which is always
- *     five days.
- *   - Exactly 2 employees are off per day (7 employees × 2 off-days
- *     ÷ 7 days = 2), so 5 employees are on duty each day to cover
- *     the 5 required working shifts (AP-PB, EU-P, EU-B, NA-P, NA-B).
- *   - The filler employee also follows 5-on/2-off. On days when the
- *     filler is on duty and a colleague is off, buildPrimarySchedule()
- *     assigns the filler to that colleague's shift (covering). On the
- *     filler's 2 off-days, the filler's cell shows 'OFF' exactly like
- *     every other employee — the filler provides no cover that day.
- */
-function distributeOffDaysForPrimaries(year, month) {
-  const days = daysInMonth(year, month);
-  const out = {};
-  for (const e of EMPLOYEES) out[e] = [];
-
-  for (let d = 1; d <= days; d++) {
-    const cycleDay = (d - 1) % 7;
-    // Employee i is off when cycleDay is in { i, (i+1) % 7 }.
-    // Two consecutive cycleDays per employee guarantees the 2-day
-    // consecutive OFF block; the gap between blocks is exactly 5
-    // days, so no employee ever works 6 days in a row.
-    for (let i = 0; i < EMPLOYEES.length; i++) {
-      if (cycleDay === i || cycleDay === (i + 1) % 7) {
-        out[EMPLOYEES[i]].push(d);
-      }
-    }
-  }
-
-  return out;
-}
-
-/* ---------- Step 3: Build Base Schedule ---------- */
-
-/**
- * Build the initial schedule from primary shifts + OFF days.
- * Each day: each employee = primary shift, except OFF days.
- *
- * Filler logic under the new spec:
- *   • Fillers DO NOT cover natural OFF days. They keep their own
- *     primary shift on every day they aren't themselves OFF.
- *   • Fillers ONLY activate when an approved leave request removes
- *     the only employee covering a working shift (handled in
- *     processTemporaryCoverage()).
- *   • If a filler is OFF that day, they provide no cover (same as
- *     every other employee) — the gap is left for temp coverage.
- *
- * Result: a normal (no-leave) month now has natural coverage gaps
- * where the OH/working shift would otherwise need cover. The user
- * explicitly opted into this model — fillers are a leave-only
- * safety net, not a daily slot-filler.
- */
-function buildPrimarySchedule(year, month, primaryShifts, offDays) {
-  const days = daysInMonth(year, month);
-  const schedule = {};
-  const assignments = primaryShifts.assignments || {};
-
-  for (let d = 1; d <= days; d++) {
-    const key = _dk(d, year, month);
-    schedule[key] = {};
-    for (const emp of EMPLOYEES) {
-      if (offDays[emp].includes(d)) {
-        schedule[key][emp] = 'OFF';
-      } else {
-        schedule[key][emp] = assignments[emp] || 'OFF';
-      }
-    }
-    // NOTE: Filler coverage for natural OFF days is intentionally
-    // disabled under the new spec. Fillers are only activated for
-    // leave-caused gaps (see processTemporaryCoverage below).
-  }
-  return schedule;
-}
-
-/* ---------- Step 4: Apply Leave Requests ---------- */
-
-/**
- * Apply all approved leave requests to the schedule.
- * Replaces the scheduled value with the leave code (which is LOCKED
- * from being overwritten by temp coverage or other operations).
- *
- * If a leave day falls on a date outside the current month it is
- * skipped silently.
- */
-function applyLeaveRequestsToSchedule(schedule, year, month, leaveRequests) {
-  if (!leaveRequests || leaveRequests.length === 0) return;
-
-  for (const lr of leaveRequests) {
-    if (!lr.startDate || !lr.endDate || !lr.employee) continue;
-    const start = parseLeaveDate(lr.startDate);
-    const end   = parseLeaveDate(lr.endDate);
-    if (!start || !end) continue;
-    const startDay = start.getDate();
-    const endDay   = end.getDate();
-
-    for (let d = startDay; d <= endDay; d++) {
-      const key = _dk(d, year, month);
-      if (schedule[key]) {
-        schedule[key][lr.employee] = lr.type;
-      }
-    }
-  }
-}
-
-function parseLeaveDate(s) {
-  if (!s) return null;
-  // Accept both YYYY-MM-DD and Date.parse-friendly strings
-  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return null;
-  return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-}
-
-/* ---------- Step 5: Temporary Coverage ---------- */
-
-/**
- * Identify which (day, shift) pairs are understaffed because a leave
- * request removed the only employee on a critical shift.
- *
- * Includes OH coverage gaps when the OH employee goes on leave.
- */
-function identifyUnderstaffedSlots(schedule, year, month) {
-  const days = daysInMonth(year, month);
-  const understaffed = [];
-  const requiredShifts = [...REQUIRED_WORKING_SHIFTS, 'OH'];
-  for (let d = 1; d <= days; d++) {
-    const key = _dk(d, year, month);
-    const row = schedule[key];
-    if (!row) continue;
-    for (const shift of requiredShifts) {
-      const covered = EMPLOYEES.some(e => row[e] === shift);
-      if (!covered) understaffed.push({ day: d, shift });
-    }
-  }
-  return understaffed;
-}
-
-/**
- * Find the best eligible employee to provide temporary coverage for a
- * specific shift on a specific day.
- *
- * Eligibility:
- *   • Not on leave (VL/SL/EL/ML/HL/COL) that day.
- *   • Not OFF that day.
- *   • Not already on another temp coverage that day.
- *   • Their primary shift is in a compatible bucket (morning/evening/night).
- *   • Their primary shift is NOT the same shift being covered (avoid
- *     backfill on their own primary so coverage feels intentional).
- */
-function findBestTempCandidate(schedule, year, month, day, shift, primaryShifts, coverageCount) {
-  const key = _dk(day, year, month);
-  const row = schedule[key];
-  if (!row) return null;
-
-  const shiftBucket = SHIFT_BUCKET[shift] || 'day';
-
-  const eligible = EMPLOYEES.filter(emp => {
-    const v = row[emp];
-    if (!v) return false;
-    if (LEAVE_CODES.has(v)) return false; // already on leave
-    if (v === 'OFF') return false;
-    if (v === shift) return false; // already on this shift
-    return true;
-  });
-
-  if (eligible.length === 0) return null;
-
-  // Score: prefer compatible bucket, then least coverage already done
-  const scored = eligible.map(emp => {
-    const primary = primaryShifts.assignments[emp];
-    const compat  = SHIFT_BUCKET[primary] === shiftBucket ? 0 : 5;
-    const load    = coverageCount[emp] || 0;
-    return { emp, score: compat * 10 + load };
-  });
-  scored.sort((a, b) => a.score - b.score);
-
-  // Pick the best, but exclude employees whose primary is OH (they
-  // shouldn't swap their OH assignment for temp coverage).
-  for (const s of scored) {
-    const primary = primaryShifts.assignments[s.emp];
-    if (primary === 'OH') continue;
-    return s.emp;
-  }
-  return scored[0]?.emp || null;
-}
-
-/**
- * Process temporary coverage: ONLY cover gaps caused by LEAVE requests.
- * Natural gaps from the OFF rotation are left as-is (per spec).
- *
- * Algorithm:
- *   1. Build the "baseline" schedule WITHOUT leaves applied.
- *   2. Build the actual schedule WITH leaves applied.
- *   3. Diff the two: find new gaps that only appear when leave is applied.
- *   4. Group those gaps into consecutive ranges per shift.
- *   5. Assign ONE designated filler per range for the full duration.
- *      Fillers are restricted to the 2-3 employees in
- *      state.fillerEmployees. Each filler is only used when eligible
- *      (not on leave, not OFF, not already covering a different shift,
- *      and their own primary is in the restricted shift pool:
- *      AP-PB / EU-P / EU-B / NA-P / NA-B).
- *
- * Returns an array of coverage ranges:
- *   [{ employee, shift, startDay, endDay }, ...]
- *
- * Spec rules followed:
- *   - Coverage ONLY when leave causes understaffing.
- *   - Coverage lasts exactly for the leave period.
- *   - Fillers MUST be drawn from state.fillerEmployees (2-3 employees).
- *   - Fillers cover ONLY: AP-PB / EU-P / EU-B / NA-P / NA-B.
- *   - AP-PB is NEVER split into AP-P or AP-B during coverage either.
- *   - Fillers are only used when their schedule permits (not OFF that day).
- *   - Prefer using ONE filler per range (minimize reassignments).
- *   - Employee is returned to primary shift after coverage ends.
- *   - Never overwrite OFF, leave, RTO, TRNG, OH.
- */
-function processTemporaryCoverage(schedule, year, month, primaryShifts, offDays) {
-  // The set of employees eligible to be fillers for coverage this month.
-  // ALWAYS use the designated fillers from state — never silently
-  // promote a non-filler into coverage. If a filler's schedule prevents
-  // them from covering (e.g. they are OFF), we leave the gap as-is.
-  const designatedFillers = (state.fillerEmployees && state.fillerEmployees.length)
-    ? state.fillerEmployees.slice()
-    : (primaryShifts.fillerEmployees || []).slice();
-
-  // Step 1: Build the baseline schedule (no leaves applied)
-  const baseline = {};
-  for (let d = 1; d <= daysInMonth(year, month); d++) {
-    const key = _dk(d, year, month);
-    baseline[key] = {};
-    for (const emp of EMPLOYEES) {
-      baseline[key][emp] = schedule[key][emp];
-    }
-  }
-  // Re-apply primary shifts + OFF (in case leaves modified them)
-  for (let d = 1; d <= daysInMonth(year, month); d++) {
-    const key = _dk(d, year, month);
-    for (const emp of EMPLOYEES) {
-      if (offDays[emp].includes(d)) {
-        baseline[key][emp] = 'OFF';
-      } else {
-        baseline[key][emp] = primaryShifts.assignments[emp];
-      }
-    }
-  }
-
-  // Step 2: Find leave-only gaps (gaps in actual schedule that aren't in baseline)
-  // NOTE: working shifts only — OH gaps are NOT covered by fillers per the
-  // spec (fillers strictly cover AP-PB / EU-P / EU-B / NA-P / NA-B).
-  const leaveOnlyGaps = {};
-  for (let d = 1; d <= daysInMonth(year, month); d++) {
-    const key = _dk(d, year, month);
-    const row = schedule[key];
-    const baseRow = baseline[key];
-    for (const shift of REQUIRED_WORKING_SHIFTS) {
-      const coveredNow = EMPLOYEES.some(e => row[e] === shift);
-      const coveredBase = EMPLOYEES.some(e => baseRow[e] === shift);
-      // Only a leave-caused gap if the baseline WAS covered but actual is NOT
-      if (!coveredNow && coveredBase) {
-        if (!leaveOnlyGaps[shift]) leaveOnlyGaps[shift] = [];
-        leaveOnlyGaps[shift].push(d);
-      }
-    }
-  }
-
-  // Step 3: Group into consecutive ranges
-  const ranges = [];
-  for (const shift in leaveOnlyGaps) {
-    const days = leaveOnlyGaps[shift].sort((a, b) => a - b);
-    let rs = days[0];
-    let prev = days[0];
-    for (let i = 1; i <= days.length; i++) {
-      const d = days[i];
-      if (d !== prev + 1) {
-        ranges.push({ shift, startDay: rs, endDay: prev });
-        rs = d;
-      }
-      prev = d;
-    }
-  }
-  if (ranges.length === 0) return [];
-
-  // Sort ranges by length descending so longest are assigned first
-  ranges.sort((a, b) => (b.endDay - a.startDay) - (a.endDay - b.startDay));
-
-  // Step 4: Assign ONE filler per range (chosen only from designated fillers)
-  const coverageCount = {};
-  const finalRanges = [];
-
-  for (const range of ranges) {
-    const candidate = findBestFillerForRange(
-      schedule, year, month, range, primaryShifts, coverageCount, designatedFillers
-    );
-    if (!candidate) continue;
-    for (let d = range.startDay; d <= range.endDay; d++) {
-      const key = _dk(d, year, month);
-      if (schedule[key]) {
-        schedule[key][candidate] = range.shift;
-      }
-    }
-    const dur = range.endDay - range.startDay + 1;
-    coverageCount[candidate] = (coverageCount[candidate] || 0) + dur;
-    finalRanges.push({
-      employee: candidate,
-      shift: range.shift,
-      startDay: range.startDay,
-      endDay: range.endDay
-    });
-  }
-
-  return finalRanges;
-}
-
-/**
- * Find the best DESIGNATED FILLER to cover a range of consecutive days
- * for a given shift.
- *
- * Eligibility (every day in the range):
- *   • Must be in state.fillerEmployees (the 2-3 designated fillers).
- *   • Must not be on leave themselves.
- *   • Must not be OFF that day.
- *   • Must not already be on the same shift being covered.
- *   • Their primary shift must be in the restricted working pool:
- *     AP-PB / EU-P / EU-B / NA-P / NA-B. (If their primary is OH or
- *     anything outside the pool, they're ineligible.)
- *
- * Prefers (in order):
- *   1. Compatible shift bucket (morning/evening/night).
- *   2. Fewest total coverage days already assigned.
- *   3. Deterministic ordering (employee index).
- */
-function findBestFillerForRange(schedule, year, month, range, primaryShifts, coverageCount, designatedFillers) {
-  const shiftBucket = SHIFT_BUCKET[range.shift] || 'day';
-  const ALLOWED_PRIMARY = new Set(['AP-PB', 'EU-P', 'EU-B', 'NA-P', 'NA-B']);
-
-  // For each designated filler, check eligibility on every day in the range
-  const eligible = designatedFillers.filter(emp => {
-    // Their primary must be in the restricted working pool
-    const primary = primaryShifts.assignments[emp];
-    if (!ALLOWED_PRIMARY.has(primary)) return false;
-    // Must be eligible on EVERY day in the range
-    for (let d = range.startDay; d <= range.endDay; d++) {
-      const key = _dk(d, year, month);
-      const row = schedule[key];
-      if (!row) return false;
-      const v = row[emp];
-      if (!v) return false;
-      if (LEAVE_CODES.has(v)) return false;       // on leave
-      if (v === 'OFF') return false;              // OFF that day
-      if (v === range.shift) return false;        // already on this shift
-    }
-    return true;
-  });
-
-  if (eligible.length === 0) return null;
-
-  // Score: prefer compatible bucket, then least coverage already done
-  const scored = eligible.map(emp => {
-    const primary = primaryShifts.assignments[emp];
-    const compat  = (SHIFT_BUCKET[primary] === shiftBucket) ? 0 : 5;
-    const load    = coverageCount[emp] || 0;
-    const empIdx  = EMPLOYEES.indexOf(emp);
-    return { emp, score: compat * 10 + load + empIdx * 0.01 };
-  });
-  scored.sort((a, b) => a.score - b.score);
-  return scored[0]?.emp || null;
-}
-
-/**
- * Find the best employee to cover a range of consecutive days for a
- * given shift. The candidate must be eligible on EVERY day in the range
- * (not on leave, not OFF, primary shift not the same shift).
- *
- * Prefers:
- *   1. Compatible shift bucket (morning/evening/night).
- *   2. Fewest total coverage days already assigned.
- *   3. Deterministic ordering (employee index).
- */
-function findBestCandidateForRange(schedule, year, month, range, primaryShifts, coverageCount) {
-  const shiftBucket = SHIFT_BUCKET[range.shift] || 'day';
-  const isOHCoverage = range.shift === 'OH';
-
-  // For each employee, check eligibility on every day in the range
-  const eligible = EMPLOYEES.filter(emp => {
-    // Must not be on leave themselves
-    for (let d = range.startDay; d <= range.endDay; d++) {
-      const key = _dk(d, year, month);
-      const row = schedule[key];
-      if (!row) return false;
-      const v = row[emp];
-      if (!v) return false;
-      if (LEAVE_CODES.has(v)) return false;       // on leave
-      if (v === 'OFF') return false;              // OFF that day
-      if (v === range.shift) return false;        // already on this shift
-      if (v === 'OH' && !isOHCoverage) return false; // don't disrupt OH for non-OH coverage
-    }
-    // Don't have the same primary as the shift being covered (else they'd be on it already)
-    // Exception: for OH coverage, anyone whose primary is OH is the leaver, so we skip them via leave check above
-    if (!isOHCoverage && primaryShifts.assignments[emp] === range.shift) return false;
-    return true;
-  });
-
-  if (eligible.length === 0) return null;
-
-  // Score: prefer compatible bucket, then least coverage already done
-  const scored = eligible.map(emp => {
-    const primary = primaryShifts.assignments[emp];
-    const compat  = (SHIFT_BUCKET[primary] === shiftBucket) ? 0 : 5;
-    const load    = coverageCount[emp] || 0;
-    const empIdx  = EMPLOYEES.indexOf(emp);
-    // For OH coverage, prefer employees whose primary is morning/day (AP-PB or OH)
-    let ohBonus = 0;
-    if (isOHCoverage && (primary === 'AP-PB' || primary === 'OH')) ohBonus = -2;
-    return { emp, score: compat * 10 + load + empIdx * 0.01 + ohBonus };
-  });
-  scored.sort((a, b) => a.score - b.score);
-  return scored[0]?.emp || null;
-}
-
-/* ---------- Step 6: Weekly OFF Validation ---------- */
-
-/**
- * Validate that each employee gets at least 1 OFF per week (best effort
- * towards the 2 OFF/week target). Returns an array of violations.
- *
- * Note: with 7 employees and 1 OFF per day, average OFFs per employee
- * is days/7 ≈ 4-5 per month ≈ 1 per week. The 2/week minimum is
- * therefore not strictly achievable; this validator reports the
- * best-effort state.
- */
-function validateWeeklyOFF(schedule, year, month) {
-  const days = daysInMonth(year, month);
-  const weeks = [];
-  let week = [];
-  for (let d = 1; d <= days; d++) {
-    const dow = getDayOfWeek(year, month, d);
-    if (dow === 1 && week.length > 0) {
-      weeks.push(week);
-      week = [];
-    }
-    week.push(d);
-  }
-  if (week.length > 0) weeks.push(week);
-
-  const violations = [];
-  for (const emp of EMPLOYEES) {
-    for (const w of weeks) {
-      const offCount = w.filter(d => {
-        const key = _dk(d, year, month);
-        return schedule[key] && schedule[key][emp] === 'OFF';
-      }).length;
-      if (offCount < 1) {
-        violations.push({ employee: emp, week: w, offCount });
-      }
-    }
-  }
-  return violations;
-}
-
-/* ---------- Step 7: Save to Rotation History ---------- */
-
-function saveToRotationHistory(year, month, primaryShifts) {
-  if (!state.rotationHistory) state.rotationHistory = [];
-  // Avoid duplicate entries for the same (year, month)
-  state.rotationHistory = state.rotationHistory.filter(
-    h => !(h.year === year && h.month === month)
-  );
-  state.rotationHistory.push({
-    year,
-    month,
-    ohEmployee: primaryShifts.ohEmployee,
-    duoShift: primaryShifts.duoShift,
-    fillerEmployees: [...(primaryShifts.fillerEmployees || [])],
-    // Keep the legacy single-filler field too so older history entries
-    // (saved with one filler) still work with the new code paths.
-    fillerEmployee: (primaryShifts.fillerEmployees || [])[0] || null,
-    assignments: { ...primaryShifts.assignments }
-  });
-  // Keep only the last 24 months of history
-  if (state.rotationHistory.length > 24) {
-    state.rotationHistory = state.rotationHistory.slice(-24);
-  }
-}
-
-/* ---------- Main Entry Point ---------- */
-
-/**
- * Build a complete month schedule using the new primary-shift engine.
- *
- * Pipeline:
- *   1. assignMonthlyPrimaryShifts() — fair rotation per month.
- *   2. distributeOffDaysForPrimaries() — fair OFF distribution.
- *   3. buildPrimarySchedule() — base schedule with primaries + OFFs.
- *   4. applyLeaveRequestsToSchedule() — leave days (locked).
- *   5. processTemporaryCoverage() — ONLY if a leave creates understaffing.
- *   6. validateWeeklyOFF() — soft weekly-OFF check.
- *   7. saveToRotationHistory() — record for next month's rotation.
- */
-function generateMonthlySchedule() {
-  const { year, month } = state;
-
-  // Step 1: Primary shift assignment with rotation
-  const primaryShifts = assignMonthlyPrimaryShifts(year, month);
-
-  // Step 2: OFF day distribution
-  const offDays = distributeOffDaysForPrimaries(year, month);
-
-  // Step 3: Build base schedule
-  let schedule = buildPrimarySchedule(year, month, primaryShifts, offDays);
-
-  // Step 4: Apply leave requests (only if mode = 'with')
-  if (state.leaveMode === 'with' && state.leaveRequests && state.leaveRequests.length > 0) {
-    applyLeaveRequestsToSchedule(schedule, year, month, state.leaveRequests);
-  }
-
-  // Step 5: Temporary coverage (only if leave exists AND creates gaps)
-  let tempCoverage = [];
-  if (state.leaveMode === 'with' && state.leaveRequests && state.leaveRequests.length > 0) {
-    tempCoverage = processTemporaryCoverage(schedule, year, month, primaryShifts, offDays);
-  }
-  state.currentTempCoverage = tempCoverage;
-  state.currentPrimaryShifts = primaryShifts;
-
-  // Step 6: Validate weekly OFF (informational only)
-  validateWeeklyOFF(schedule, year, month);
-
-  // Step 7: Save to rotation history
-  saveToRotationHistory(year, month, primaryShifts);
-
-  // Mirror VL into legacy vl map for back-compat
-  state.vl = {};
-  for (const lr of (state.leaveRequests || [])) {
-    if (lr.type === 'VL') {
-      const s = parseLeaveDate(lr.startDate);
-      const e = parseLeaveDate(lr.endDate);
-      if (!s || !e) continue;
-      for (let d = s.getDate(); d <= e.getDate(); d++) {
-        const key = _dk(d, year, month);
-        if (!state.vl[key]) state.vl[key] = [];
-        if (!state.vl[key].includes(lr.employee)) state.vl[key].push(lr.employee);
-      }
-    }
-  }
-
-  return schedule;
-}
-
-/* ---------- Backward-compatible wrappers (used by older code paths) ---------- */
-
-/**
- * Used by the dashboard & coverage banner. Returns the monthly OH employee
- * based on the current primary-shift engine.
- */
-function assignMonthlyOH() {
-  if (state.currentPrimaryShifts && state.currentPrimaryShifts.ohEmployee) {
-    return state.currentPrimaryShifts.ohEmployee;
-  }
-  // Fallback to history-based lookup
-  const { year, month } = state;
-  const last = findPriorMonthEntry(year, month, state.rotationHistory || []);
-  return pickFairOH(last, state.rotationHistory || []);
-}
-
-/**
- * Compute the per-employee "primary shift" from the schedule for the
- * Monthly Shift Assignment panel. With the new engine, this should match
- * state.currentPrimaryShifts.assignments exactly, but we compute from
- * the schedule for resilience.
- */
-function computePrimaryAssignmentsFromSchedule(year, month) {
-  if (state.currentPrimaryShifts && state.currentPrimaryShifts.assignments) {
-    return state.currentPrimaryShifts.assignments;
-  }
-  // Legacy fallback
-  const out = {};
-  for (const emp of EMPLOYEES) out[emp] = 'OFF';
-  for (let d = 1; d <= daysInMonth(year, month); d++) {
-    const key = dateKey(year, month, d);
-    const row = state.schedule[key];
-    if (!row) continue;
-    for (const emp of EMPLOYEES) {
-      const v = row[emp];
-      if (!v || v === 'OFF' || LEAVE_CODES.has(v) || v === 'RTO' || v === 'TRNG') continue;
-      out[emp] = v;
-    }
-  }
-  return out;
-}
-
-/**
- * Legacy rebalance function (used by manual cell edits). Preserves
- * locked cells and re-distributes working shifts for a single day.
- */
-function rebalanceForLeave(d) {
-  const year = state.year;
-  const month = state.month;
-  const key = _dk(d, year, month);
-  const row = state.schedule[key];
-  if (!row) return;
-
-  // Determine locked cells
-  for (const e of EMPLOYEES) {
-    const v = row[e];
-    if (LOCKED_CODES.has(v) || LEAVE_CODES.has(v)) {
-      // Locked - keep as is
-    }
-  }
-
-  // For the new engine, manual cell edits directly modify the schedule.
-  // Temp coverage is recomputed on the next generateMonthlySchedule() call.
-  // We do not auto-rebalance because the primary shift model is stable.
-}
-
-/* Legacy helpers retained for compatibility with exports / stats */
-function _rebalanceDay(schedule, d, year, month) {
-  // No-op in the new engine (primary shifts are fixed per month)
-  return true;
-}
-
-function _cumulativeCounts(schedule, year, month, upToDay) {
-  return _emptyCounts();
-}
-
-function assignOffDays(year, month) {
-  return distributeOffDaysForPrimaries(year, month);
-}
-
-function generateDailyCoverage(d, year, month, offDays, monthlyOH, monthlyCounts, prevShifts) {
-  // Legacy fallback — returns the schedule row for day d if it exists.
-  const key = _dk(d, year, month);
-  return state.schedule[key] || {};
-}
-
-function rotateOperationalShifts(working, today, prevShifts, monthlyCounts) {
-  // No-op in the new engine.
-}
-
-function validateCoverage(schedule, year, month) {
-  // No-op: with the primary shift engine, coverage is enforced by design.
-  return 0;
-}
-
-function _scoreWorkingCandidate(emp, targetShift, prevShifts, monthlyCounts) {
-  return 0;
-}
-
-function _isDayValid(row) {
-  // Relaxed: any row with all 7 employees assigned is valid.
-  if (!row) return false;
-  return EMPLOYEES.every(e => row[e]);
-}
+const STORAGE_KEY = 'rot_scheduler_state_v4';
 
 /* =====================================================================
    STATE
    ===================================================================== */
 
-const STORAGE_KEY = 'rot_scheduler_state_v3';
-
+/** Returns a fresh default state object. */
 const defaultState = () => ({
   year: new Date().getFullYear(),
   month: new Date().getMonth(),
-  schedule: {},
-  vl: {},
-  // ===== NEW: Leave Request + Rotation Engine =====
-  leaveMode: 'none',           // 'none' | 'with'
-  leaveRequests: [],           // [{ id, employee, type, startDate, endDate }]
-  currentPrimaryShifts: null,  // { ohEmployee, duoShift, fillerEmployees: [emp, ...], assignments: {emp: shift} }
-  currentTempCoverage: [],     // [{ employee, shift, startDay, endDay }]
-  rotationHistory: [],         // [{year, month, ohEmployee, duoShift, fillerEmployees: [emp, ...], assignments}]
-  // ==================================================
-  fillerEmployees: [],         // Designated fillers for the current month (2-3 employees)
-  fillerCount: 3,              // How many fillers to designate per month (2 or 3)
-  cindyOhOverride: false,      // Set true to permanently exclude Cindy from being OH
-  rotationMemory: {
-    monthCount: 0,
-    lastMonthAssignments: {},
-    cumulative: {}
-  },
-  theme: 'light'
+  schedule: {},                  // generated shifts: { 'YYYY-MM-DD': { emp: code } }
+  theme: 'light',
+  // ===== Configuration =====
+  dayOffConfig: {},              // { emp: 'Mon-Tue' }
+  rotationPattern: {},           // { emp: 'EU-P' }
+  leaveRequests: [],             // [{ id, employee, date, type, reason, approved }]
+  scheduleBuilt: false           // true if Create Schedule has been run for current month
 });
 
 let state = defaultState();
-
 let filterState = { employee: '', shift: '', mode: 'all' };
+let _leaveEditingId = null;
 
 /* =====================================================================
-   UTILITY HELPERS
+   UTILITIES
    ===================================================================== */
 
-function pad2(n) { return n < 10 ? '0' + n : '' + n; }
-
-function dateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
-
-function daysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-function getDayOfWeek(year, month, day) {
-  return new Date(year, month, day).getDay();   // 0 = Sun
-}
-
-function isWeekend(year, month, day) {
+const pad2 = n => (n < 10 ? '0' + n : '' + n);
+const dateKey = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
+const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+const getDayOfWeek = (year, month, day) => new Date(year, month, day).getDay();
+const isWeekend = (year, month, day) => {
   const dow = getDayOfWeek(year, month, day);
   return dow === 0 || dow === 6;
-}
-
-function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
-function getInitials(fullName) {
-  return fullName.split(/\s+/).map(s => s[0]).join('').slice(0, 2);
-}
-
-/** Fisher–Yates shuffle (kept for compatibility / future use). */
-function shuffleArray(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const t = a[i]; a[i] = a[j]; a[j] = t;
-  }
-  return a;
-}
+};
+const getInitials = fullName => fullName.split(/\s+/).map(s => s[0]).join('').slice(0, 2);
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
 
 /** Convert #rrggbb → ARGB hex expected by Excel cell styles. */
 function argbFromHex(hex) {
@@ -2936,45 +1815,573 @@ function argbFromHex(hex) {
   return ('FF' + hex.toUpperCase());
 }
 
-/**
- * Return the full shift breakdown for one employee over the month,
- * sorted by count desc. Each entry is [shiftCode, dayCount].
- * Used by the Monthly Assignments card.
- */
-function getEmployeeShiftBreakdown(emp, year, month) {
-  const totalDays = daysInMonth(year, month);
-  const counts = {};
-  for (let d = 1; d <= totalDays; d++) {
-    const key = dateKey(year, month, d);
-    const row = state.schedule[key];
-    if (!row) continue;
-    const s = row[emp];
-    if (!s) continue;
-    counts[s] = (counts[s] || 0) + 1;
-  }
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-}
-
-/** The single most-frequent shift for one employee (for compat). */
-function getEmployeePrimaryShift(emp, year, month) {
-  const breakdown = getEmployeeShiftBreakdown(emp, year, month);
-  const working = breakdown.find(([code]) =>
-    SHIFT_BUCKET[code] !== 'off' && SHIFT_BUCKET[code] !== 'leave'
-  );
-  if (working) return working[0];
-  if (breakdown.length > 0) return breakdown[0][0];
-  return 'OFF';
-}
-
-/** Returns a per-employee map of the most-frequent working shift. */
-function computePrimaryAssignmentsFromSchedule(year, month) {
-  const out = {};
-  for (const emp of EMPLOYEES) out[emp] = getEmployeePrimaryShift(emp, year, month);
-  return out;
+/** Parse a YYYY-MM-DD string (or null). */
+function parseLeaveDate(s) {
+  if (!s) return null;
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
 }
 
 /* =====================================================================
-   TOAST UI
+   STORAGE LAYER
+   ---------------------------------------------------------------------
+   All persistence flows through saveToStorage() / loadFromStorage().
+   The legacy v3 storage key is intentionally NOT migrated — the new
+   data shape is different and we keep state clean.
+   ===================================================================== */
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.warn('LocalStorage save failed', err);
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return false;
+    state = Object.assign(defaultState(), parsed);
+    // Normalize collections to avoid runtime errors on bad data
+    state.dayOffConfig   = state.dayOffConfig   || {};
+    state.rotationPattern = state.rotationPattern || {};
+    state.leaveRequests  = Array.isArray(state.leaveRequests) ? state.leaveRequests : [];
+    state.schedule       = state.schedule       || {};
+    return true;
+  } catch (err) {
+    console.warn('LocalStorage load failed', err);
+    return false;
+  }
+}
+
+/* =====================================================================
+   VALIDATION
+   ===================================================================== */
+
+/** Returns an error string or null if the day-off config is complete. */
+function validateDayOffConfig(cfg) {
+  if (!cfg || typeof cfg !== 'object') return 'No day-off configuration.';
+  const missing = EMPLOYEES.filter(e => !cfg[e] || !DAY_OFF_PAIRS.some(p => p.code === cfg[e]));
+  if (missing.length > 0) {
+    return `Missing day-off pair for: ${missing.join(', ')}.`;
+  }
+  return null;
+}
+
+/** Returns an error string or null if the rotation pattern is complete. */
+function validateRotationPattern(pat) {
+  if (!pat || typeof pat !== 'object') return 'No rotation pattern.';
+  const missing = EMPLOYEES.filter(e => !pat[e] || !ROTATION_OPTIONS.includes(pat[e]));
+  if (missing.length > 0) {
+    return `Missing default shift for: ${missing.join(', ')}.`;
+  }
+  return null;
+}
+
+/** Returns an error string or null if the leave request passes validation. */
+function validateLeaveRequest(req, editingId = null) {
+  if (!req) return 'Empty request.';
+  if (!req.employee)   return 'Please select an employee.';
+  if (!req.date)       return 'Please pick a leave date.';
+  if (!req.type)       return 'Please choose a leave type.';
+  if (!EMPLOYEES.includes(req.employee)) return 'Invalid employee.';
+  const d = parseLeaveDate(req.date);
+  if (!d) return 'Invalid date format.';
+
+  // Duplicate check (same employee + same date)
+  const dup = (state.leaveRequests || []).find(lr =>
+    lr.id !== editingId &&
+    lr.employee === req.employee &&
+    lr.date === req.date
+  );
+  if (dup) {
+    return `Duplicate leave: ${req.employee} already has a ${dup.type} on ${req.date}.`;
+  }
+  return null;
+}
+
+/** Master validation: returns first error or null. */
+function validateConfiguration() {
+  const e1 = validateDayOffConfig(state.dayOffConfig);
+  if (e1) return e1;
+  const e2 = validateRotationPattern(state.rotationPattern);
+  if (e2) return e2;
+  return null;
+}
+
+/* =====================================================================
+   CONFIGURATION MODULES
+   ===================================================================== */
+
+/* ---- Module 1: Fixed Day Off Configuration ---- */
+
+function loadDayOffConfiguration() {
+  // Render the table with currently-saved values (or empty for unsaved entries).
+  const tbody = document.getElementById('dayOffTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = EMPLOYEES.map(emp => {
+    const saved = state.dayOffConfig[emp] || '';
+    const initials = getInitials(emp);
+    return `
+      <tr data-emp="${escapeHtml(emp)}">
+        <td>
+          <div class="config-emp">
+            <div class="config-avatar" style="background:${getShiftColorVar('OH')}">${initials}</div>
+            <span>${escapeHtml(emp)}</span>
+          </div>
+        </td>
+        <td>
+          <select class="config-select" data-emp="${escapeHtml(emp)}" data-config="dayOff">
+            <option value="">— select recurring 2-day pair —</option>
+            ${DAY_OFF_PAIRS.map(p => `<option value="${p.code}" ${saved === p.code ? 'selected' : ''}>${p.label}</option>`).join('')}
+          </select>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  updateDayOffSummary();
+}
+
+/** Read the form values, return a plain object {emp: pairCode}. */
+function readDayOffForm() {
+  const out = {};
+  document.querySelectorAll('#dayOffTableBody select[data-config="dayOff"]').forEach(sel => {
+    const emp = sel.dataset.emp;
+    if (emp) out[emp] = sel.value;
+  });
+  return out;
+}
+
+function saveDayOffConfiguration() {
+  const formValues = readDayOffForm();
+  // Validate before saving
+  for (const emp of EMPLOYEES) {
+    if (!formValues[emp]) {
+      showConfigValidation('dayOff', `Please pick a recurring 2-day pair for ${emp}.`, 'error');
+      toast(`Cannot save — ${emp} has no day-off pair selected.`, 'error');
+      return false;
+    }
+    if (!DAY_OFF_PAIRS.some(p => p.code === formValues[emp])) {
+      showConfigValidation('dayOff', `Invalid value for ${emp}.`, 'error');
+      return false;
+    }
+  }
+  state.dayOffConfig = formValues;
+  saveToStorage();
+  updateDayOffSummary();
+  showConfigValidation('dayOff', 'Fixed day-off configuration saved.', 'success');
+  toast('Fixed day-off configuration saved');
+  return true;
+}
+
+function clearDayOffConfiguration() {
+  state.dayOffConfig = {};
+  saveToStorage();
+  loadDayOffConfiguration();
+  showConfigValidation('dayOff', 'All day-off selections cleared. Click Save to apply.', 'success');
+}
+
+function updateDayOffSummary() {
+  const total = EMPLOYEES.length;
+  const configured = EMPLOYEES.filter(e => state.dayOffConfig[e]).length;
+  const chip = document.getElementById('dayOffSummaryChip');
+  const text = document.getElementById('dayOffSummaryText');
+  if (!chip || !text) return;
+  if (configured === 0) {
+    chip.className = 'chip warn';
+    chip.textContent = 'No employees configured';
+    text.textContent = 'Pick a recurring 2-day pair for every employee, then save.';
+  } else if (configured < total) {
+    chip.className = 'chip warn';
+    chip.textContent = `${configured} / ${total} configured`;
+    text.textContent = `${total - configured} employee(s) still need a day-off pair.`;
+  } else {
+    chip.className = 'chip ok';
+    chip.textContent = `${configured} / ${total} configured`;
+    text.textContent = 'All employees have a saved recurring weekly day off.';
+  }
+}
+
+/* ---- Module 2: Rotation Pattern ---- */
+
+function loadRotationPattern() {
+  const tbody = document.getElementById('rotationTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = EMPLOYEES.map(emp => {
+    const saved = state.rotationPattern[emp] || '';
+    const initials = getInitials(emp);
+    const swatch = saved ? `<span class="config-swatch" style="background:${getShiftColorVar(saved)}">${saved}</span>` : '';
+    return `
+      <tr data-emp="${escapeHtml(emp)}">
+        <td>
+          <div class="config-emp">
+            <div class="config-avatar" style="background:${saved ? getShiftColorVar(saved) : getShiftColorVar('OH')}">${initials}</div>
+            <span>${escapeHtml(emp)}</span>
+          </div>
+        </td>
+        <td>
+          <select class="config-select" data-emp="${escapeHtml(emp)}" data-config="rotation">
+            <option value="">— select default shift —</option>
+            ${ROTATION_OPTIONS.map(opt => `<option value="${opt}" ${saved === opt ? 'selected' : ''}>${opt}${SHIFT_TIMES[opt] ? ' — ' + SHIFT_TIMES[opt] : ''}</option>`).join('')}
+          </select>
+          ${swatch}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  updateRotationSummary();
+}
+
+function readRotationForm() {
+  const out = {};
+  document.querySelectorAll('#rotationTableBody select[data-config="rotation"]').forEach(sel => {
+    const emp = sel.dataset.emp;
+    if (emp) out[emp] = sel.value;
+  });
+  return out;
+}
+
+function saveRotationPattern() {
+  const formValues = readRotationForm();
+  for (const emp of EMPLOYEES) {
+    if (!formValues[emp]) {
+      showConfigValidation('rotation', `Please pick a default shift for ${emp}.`, 'error');
+      toast(`Cannot save — ${emp} has no default shift selected.`, 'error');
+      return false;
+    }
+    if (!ROTATION_OPTIONS.includes(formValues[emp])) {
+      showConfigValidation('rotation', `Invalid value for ${emp}.`, 'error');
+      return false;
+    }
+  }
+  state.rotationPattern = formValues;
+  saveToStorage();
+  updateRotationSummary();
+  showConfigValidation('rotation', 'Rotation pattern saved.', 'success');
+  toast('Rotation pattern saved');
+  return true;
+}
+
+function clearRotationPattern() {
+  state.rotationPattern = {};
+  saveToStorage();
+  loadRotationPattern();
+  showConfigValidation('rotation', 'All rotation selections cleared. Click Save to apply.', 'success');
+}
+
+function updateRotationSummary() {
+  const total = EMPLOYEES.length;
+  const configured = EMPLOYEES.filter(e => state.rotationPattern[e]).length;
+  const chip = document.getElementById('rotationSummaryChip');
+  const text = document.getElementById('rotationSummaryText');
+  if (!chip || !text) return;
+  if (configured === 0) {
+    chip.className = 'chip warn';
+    chip.textContent = 'No employees configured';
+    text.textContent = 'Pick a default shift for every employee, then save.';
+  } else if (configured < total) {
+    chip.className = 'chip warn';
+    chip.textContent = `${configured} / ${total} configured`;
+    text.textContent = `${total - configured} employee(s) still need a default shift.`;
+  } else {
+    chip.className = 'chip ok';
+    chip.textContent = `${configured} / ${total} configured`;
+    text.textContent = 'All employees have a saved default shift.';
+  }
+}
+
+/* ---- Module 3: Leave Requests ---- */
+
+function loadLeaveRequests() {
+  populateLeaveDateBounds();
+  renderLeaveTable();
+}
+
+function populateLeaveDateBounds() {
+  const dateInput = document.getElementById('leaveDate');
+  if (!dateInput) return;
+  const { year, month } = state;
+  const first = dateKey(year, month, 1);
+  const last  = dateKey(year, month, daysInMonth(year, month));
+  dateInput.min = first;
+  dateInput.max = last;
+  if (!dateInput.value) dateInput.value = first;
+}
+
+function renderLeaveTable() {
+  const list = state.leaveRequests || [];
+  const wrap = document.getElementById('leaveTableWrap');
+  const tbody = document.getElementById('leaveTableBody');
+  const actions = document.getElementById('leaveTableActions');
+  const summary = document.getElementById('leaveSummary');
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="leave-table-empty">No leave requests yet. Add one above.</td></tr>`;
+    if (actions) actions.style.display = 'none';
+    return;
+  }
+
+  if (actions) actions.style.display = 'flex';
+  if (summary) {
+    const approved = list.filter(l => l.approved).length;
+    summary.textContent = `${list.length} request${list.length !== 1 ? 's' : ''} total · ${approved} approved`;
+  }
+
+  // Sort by date, then employee
+  const sorted = [...list].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.employee.localeCompare(b.employee);
+  });
+
+  tbody.innerHTML = sorted.map(lr => {
+    const d = parseLeaveDate(lr.date);
+    const dStr = d ? `${d.getDate()} ${MONTH_NAMES_SHORT[state.month]} ${d.getFullYear()}` : lr.date;
+    const typeColor = getShiftColorVar(lr.type);
+    const isEditing = _leaveEditingId === lr.id;
+    const approvedPill = lr.approved
+      ? `<span class="approved-pill">✓ Approved</span>`
+      : `<span class="approved-pill pending">○ Pending</span>`;
+    return `
+      <tr${isEditing ? ' style="background:var(--hl-selected);"' : ''}>
+        <td><strong>${escapeHtml(lr.employee)}</strong></td>
+        <td>${dStr}</td>
+        <td><span class="leave-pill" style="background:${typeColor}">${lr.type}</span></td>
+        <td>${escapeHtml(lr.reason || '—')}</td>
+        <td>${approvedPill}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn btn-outline" data-action="edit-leave" data-id="${lr.id}" style="padding:5px 10px;font-size:12px;">✎ Edit</button>
+            <button class="btn btn-danger"  data-action="delete-leave" data-id="${lr.id}" style="padding:5px 10px;font-size:12px;">🗑 Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function readLeaveForm() {
+  return {
+    employee: document.getElementById('leaveEmployee').value,
+    date:     document.getElementById('leaveDate').value,
+    type:     document.getElementById('leaveType').value,
+    reason:   document.getElementById('leaveReason').value.trim(),
+    approved: document.getElementById('leaveApproved').checked
+  };
+}
+
+function resetLeaveForm() {
+  _leaveEditingId = null;
+  document.getElementById('btnCancelEditLeave').style.display = 'none';
+  document.getElementById('btnAddLeave').textContent = '➕ Add / Save';
+  document.getElementById('leaveReason').value = '';
+  document.getElementById('leaveApproved').checked = true;
+  populateLeaveDateBounds();
+  showLeaveValidation(null);
+}
+
+function saveLeaveRequests(/*req*/) {
+  // No-op: the leave form saves inline via addOrUpdateLeaveRequest().
+  // This function exists to match the modular API surface.
+}
+
+function addOrUpdateLeaveRequest() {
+  const req = readLeaveForm();
+  const editingId = _leaveEditingId;
+  const err = validateLeaveRequest(req, editingId);
+  if (err) {
+    showLeaveValidation(err, 'error');
+    return;
+  }
+
+  if (!Array.isArray(state.leaveRequests)) state.leaveRequests = [];
+
+  if (editingId) {
+    const idx = state.leaveRequests.findIndex(lr => lr.id === editingId);
+    if (idx >= 0) {
+      state.leaveRequests[idx] = { ...state.leaveRequests[idx], ...req };
+      showLeaveValidation(`Updated leave request for ${req.employee}.`, 'success');
+    }
+    resetLeaveForm();
+  } else {
+    const id = `lr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    state.leaveRequests.push({ id, ...req });
+    showLeaveValidation(`Saved ${req.type} leave for ${req.employee}.`, 'success');
+  }
+
+  renderLeaveTable();
+  saveToStorage();
+  toast('Leave request saved');
+}
+
+function editLeaveRequest(id) {
+  const lr = (state.leaveRequests || []).find(x => x.id === id);
+  if (!lr) return;
+  document.getElementById('leaveEmployee').value = lr.employee;
+  document.getElementById('leaveDate').value     = lr.date;
+  document.getElementById('leaveType').value     = lr.type;
+  document.getElementById('leaveReason').value   = lr.reason || '';
+  document.getElementById('leaveApproved').checked = !!lr.approved;
+  _leaveEditingId = id;
+  document.getElementById('btnCancelEditLeave').style.display = 'inline-flex';
+  document.getElementById('btnAddLeave').textContent = '💾 Save Changes';
+  renderLeaveTable();
+  showLeaveValidation(`Editing ${lr.employee}'s ${lr.type} leave. Adjust fields then save.`, 'success');
+}
+
+function deleteLeaveRequest(id) {
+  state.leaveRequests = (state.leaveRequests || []).filter(lr => lr.id !== id);
+  if (_leaveEditingId === id) resetLeaveForm();
+  renderLeaveTable();
+  saveToStorage();
+  toast('Leave request removed', 'warn');
+}
+
+function clearAllLeaveRequests() {
+  if (!state.leaveRequests || state.leaveRequests.length === 0) return;
+  state.leaveRequests = [];
+  resetLeaveForm();
+  renderLeaveTable();
+  saveToStorage();
+  toast('All leave requests cleared', 'warn');
+}
+
+/* =====================================================================
+   SCHEDULE GENERATION
+   ---------------------------------------------------------------------
+   Reads the three saved configurations and populates state.schedule.
+
+   Priority rules (first match wins, so the order is important):
+     1. Approved leave          → VL
+     2. Recurring weekly off    → OFF
+     3. Default rotation pattern → saved shift
+   ===================================================================== */
+
+function generateSchedule() {
+  const err = validateConfiguration();
+  if (err) {
+    toast(`Configuration incomplete: ${err}`, 'error');
+    return false;
+  }
+
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+  const newSchedule = {};
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    newSchedule[key] = {};
+  }
+
+  // ---- Rule 1: Approved leave → VL ----
+  for (const lr of (state.leaveRequests || [])) {
+    if (!lr.approved) continue;
+    if (!lr.employee || !lr.date) continue;
+    if (!EMPLOYEES.includes(lr.employee)) continue;
+    const d = parseLeaveDate(lr.date);
+    if (!d) continue;
+    if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+    const key = dateKey(year, month, d.getDate());
+    if (newSchedule[key]) {
+      newSchedule[key][lr.employee] = 'VL';
+    }
+  }
+
+  // ---- Rule 2: Recurring 2-day consecutive weekly off → OFF ----
+  for (const emp of EMPLOYEES) {
+    const pairCode = state.dayOffConfig[emp];
+    if (!pairCode) continue;
+    const pair = DAY_OFF_PAIRS.find(p => p.code === pairCode);
+    if (!pair) continue;
+    const startIdx = pair.startIdx;
+    const endIdx   = (startIdx + 1) % 7;   // wrap-around for Sun-Mon
+    for (let d = 1; d <= totalDays; d++) {
+      const dow = getDayOfWeek(year, month, d);
+      if (dow === startIdx || dow === endIdx) {
+        const key = dateKey(year, month, d);
+        // Only assign OFF if VL hasn't already claimed this cell
+        if (!newSchedule[key][emp]) {
+          newSchedule[key][emp] = 'OFF';
+        }
+      }
+    }
+  }
+
+  // ---- Rule 3: Default rotation pattern → saved shift ----
+  for (const emp of EMPLOYEES) {
+    const pat = state.rotationPattern[emp];
+    if (!pat) continue;
+    for (let d = 1; d <= totalDays; d++) {
+      const key = dateKey(year, month, d);
+      if (!newSchedule[key][emp]) {
+        newSchedule[key][emp] = pat;
+      }
+    }
+  }
+
+  state.schedule = newSchedule;
+  state.scheduleBuilt = true;
+  saveToStorage();
+  renderSchedule();
+  updateDashboard();
+  updateScheduleStatusBanner();
+  toast(`Schedule created for ${MONTH_NAMES[month]} ${year}`, 'success');
+  return true;
+}
+
+/** Clear the generated schedule. Configurations are NOT touched. */
+function clearSchedule() {
+  state.schedule = {};
+  state.scheduleBuilt = false;
+  saveToStorage();
+  renderSchedule();
+  updateDashboard();
+  updateScheduleStatusBanner();
+  toast('Schedule cleared — configurations preserved', 'warn');
+}
+
+/** Update the status banner above the schedule grid. */
+function updateScheduleStatusBanner() {
+  const banner = document.getElementById('scheduleStatusBanner');
+  const text   = document.getElementById('scheduleStatusText');
+  if (!banner || !text) return;
+  const totalDays = daysInMonth(state.year, state.month);
+  const filled = countScheduleCells();
+
+  if (!state.scheduleBuilt) {
+    banner.className = 'coverage-banner info';
+    text.innerHTML = `No schedule generated yet for ${MONTH_NAMES[state.month]} ${state.year}. Configure day off, rotation, and leave requests, then click <strong>Create Schedule</strong>.`;
+  } else if (filled === 0) {
+    banner.className = 'coverage-banner warn';
+    text.innerHTML = `Schedule cleared for ${MONTH_NAMES[state.month]} ${state.year}. Click <strong>Create Schedule</strong> to rebuild.`;
+  } else if (filled < totalDays * EMPLOYEES.length) {
+    banner.className = 'coverage-banner warn';
+    text.innerHTML = `Schedule partially built — ${filled} of ${totalDays * EMPLOYEES.length} cells filled. Review your configurations.`;
+  } else {
+    banner.className = 'coverage-banner ok';
+    text.innerHTML = `✓ Schedule ready for ${MONTH_NAMES[state.month]} ${state.year} — ${filled} cells filled using saved configurations.`;
+  }
+}
+
+function countScheduleCells() {
+  let n = 0;
+  for (const key in state.schedule) {
+    const row = state.schedule[key];
+    if (!row) continue;
+    for (const emp in row) {
+      if (row[emp]) n++;
+    }
+  }
+  return n;
+}
+
+/* =====================================================================
+   UI HELPERS — TOAST + MODAL
    ===================================================================== */
 
 function toast(msg, type = 'success') {
@@ -2986,12 +2393,8 @@ function toast(msg, type = 'success') {
     el.style.transition = 'opacity 0.3s';
     el.style.opacity = '0';
     setTimeout(() => el.remove(), 320);
-  }, 2400);
+  }, 2600);
 }
-
-/* =====================================================================
-   MODAL CONFIRM
-   ===================================================================== */
 
 function confirmModal(title, body, confirmLabel = 'Confirm', confirmStyle = 'primary') {
   return new Promise(resolve => {
@@ -3013,419 +2416,32 @@ function confirmModal(title, body, confirmLabel = 'Confirm', confirmStyle = 'pri
   });
 }
 
-/* =====================================================================
-   SCHEDULE GENERATION — UI ENTRY POINTS
-   ===================================================================== */
-
-/**
- * Generate (or regenerate) the schedule for the current month without
- * rotating the OH employee. The spec requires that OH change only when
- * a new month is generated, so a plain "Generate" click keeps OH stable.
- */
-function generateSchedule() {
-  const { year, month } = state;
-
-  // Build the schedule using the engine.
-  state.schedule = generateMonthlySchedule();
-
-  // Track the OH employee assigned for this month (for the dashboard).
-  if (!state.rotationMemory) state.rotationMemory = { monthCount: 0, lastMonthAssignments: {}, cumulative: {} };
-  state.rotationMemory.lastMonthAssignments = computePrimaryAssignmentsFromSchedule(year, month);
-  state.rotationMemory.monthCount = state.rotationMemory.monthCount || 0;
-
-  saveSchedule();
-  render();
-  const fillers = (state.fillerEmployees && state.fillerEmployees.length)
-    ? state.fillerEmployees.join(', ')
-    : '—';
-  toast(`Schedule generated for ${MONTH_NAMES[month]} ${year} — OH: ${assignMonthlyOH()}  •  Fillers (${state.fillerEmployees?.length || 0}): ${fillers}`);
-}
-
-/** Advance calendar to next month then generate. */
-function generateNextMonth() {
-  // Move to the next month — the rotation engine will pick the next OH employee.
-  let m = state.month + 1;
-  let y = state.year;
-  if (m > 11) { m = 0; y += 1; }
-  state.month = m;
-  state.year = y;
-  state.vl = {};
-
-  document.getElementById('monthSelect').value = m;
-  document.getElementById('yearSelect').value = y;
-  populateLeaveControls();
-
-  state.schedule = generateMonthlySchedule();
-  state.rotationMemory = state.rotationMemory || { monthCount: 0, lastMonthAssignments: {}, cumulative: {} };
-  state.rotationMemory.lastMonthAssignments =
-    computePrimaryAssignmentsFromSchedule(state.year, state.month);
-
-  saveSchedule();
-  render();
-  const fillers = (state.fillerEmployees && state.fillerEmployees.length)
-    ? state.fillerEmployees.join(', ')
-    : '—';
-  toast(`Schedule generated for ${MONTH_NAMES[m]} ${y} — OH: ${assignMonthlyOH()}  •  Fillers (${state.fillerEmployees?.length || 0}): ${fillers}`);
-}
-
-/** Soft reset — keep the visible schedule, clear rotation memory. */
-function softReset() {
-  state.rotationMemory = { monthCount: 0, lastMonthAssignments: {}, cumulative: {} };
-  state.rotationHistory = [];
-  state.vl = {};
-  // Force re-pick by regenerating the schedule.
-  state.schedule = generateMonthlySchedule();
-  state.rotationMemory.lastMonthAssignments =
-    computePrimaryAssignmentsFromSchedule(state.year, state.month);
-  saveSchedule();
-  render();
-  toast('Rotation memory cleared — fresh start for ' + MONTH_NAMES[state.month], 'warn');
-}
-
-/* ---------- Quick Apply (rotation pattern) ---------- */
-
-/**
- * Apply a single shift pattern to one employee for the entire month.
- *
- *  Phase 1 — overwrite EVERY non-locked cell with `pattern`.
- *  Phase 2 — rebalance the affected day if it breaks coverage
- *            (rare; usually the locked OFF / leave cells keep it valid).
- *
- * Locked cells (OFF, VL, EL, SL, ML, HOL, CO, OH, RTO, TRNG) are
- * NEVER overwritten by Phase 1.
- */
-function applyRotationPattern(emp, pattern) {
-  const { year, month } = state;
-  const totalDays = daysInMonth(year, month);
-  let touched = 0;
-  let preserved = 0;
-
-  for (let d = 1; d <= totalDays; d++) {
-    const key = dateKey(year, month, d);
-    if (!state.schedule[key]) state.schedule[key] = {};
-    const current = state.schedule[key][emp];
-    if (current && LOCKED_SHIFTS.has(current)) {
-      preserved++;
-      continue;
-    }
-    state.schedule[key][emp] = pattern;
-    touched++;
-  }
-
-  // Validate / repair any day that became invalid.
-  validateCoverage(state.schedule, year, month);
-
-  syncPrimaryAssignments();
-  saveSchedule();
-  render();
-  toast(`Applied ${pattern} rotation to ${emp} (${touched} cells updated, ${preserved} locked preserved)`);
-}
-
-/** Reset an employee's rotation pattern — clears all non-locked cells. */
-function clearEmployeeRotation(emp) {
-  const { year, month } = state;
-  const totalDays = daysInMonth(year, month);
-  for (let d = 1; d <= totalDays; d++) {
-    const key = dateKey(year, month, d);
-    const current = (state.schedule[key] || {})[emp];
-    if (!current) continue;
-    if (LOCKED_SHIFTS.has(current)) continue;
-    state.schedule[key][emp] = '';
-  }
-  // Repair any day that lost coverage.
-  validateCoverage(state.schedule, year, month);
-  syncPrimaryAssignments();
-  saveSchedule();
-  render();
-  toast(`Pattern cleared for ${emp}`, 'warn');
-}
-
-/**
- * Clear an employee's entire schedule for the current month.
- * Locked cells (OFF, VL, EL, SL, ML, HOL, CO, OH, RTO, TRNG) are preserved.
- * If the employee is the current filler, the filler designation is also cleared
- * so the schedule can be regenerated cleanly.
- */
-function clearEmployeeSchedule(emp) {
-  if (!emp) return;
-  const { year, month } = state;
-  const totalDays = daysInMonth(year, month);
-  let cleared = 0;
-  let preserved = 0;
-
-  for (let d = 1; d <= totalDays; d++) {
-    const key = dateKey(year, month, d);
-    if (!state.schedule[key]) state.schedule[key] = {};
-    const current = state.schedule[key][emp];
-    if (!current) continue;
-    if (LOCKED_SHIFTS.has(current)) {
-      preserved++;
-      continue;
-    }
-    state.schedule[key][emp] = '';
-    cleared++;
-  }
-
-  // If this employee was one of the designated fillers, clear that
-  // designation so the next regeneration picks fresh fillers fairly.
-  if (Array.isArray(state.fillerEmployees) && state.fillerEmployees.includes(emp)) {
-    state.fillerEmployees = state.fillerEmployees.filter(e => e !== emp);
-  }
-  // Backward-compat: also clear the legacy single filler field if it matched
-  if (state.fillerEmployee === emp) {
-    state.fillerEmployee = null;
-  }
-
-  // If the employee was tracked as the OH holder, clear that from currentPrimaryShifts.
-  if (state.currentPrimaryShifts && state.currentPrimaryShifts.ohEmployee === emp) {
-    state.currentPrimaryShifts.ohEmployee = null;
-  }
-
-  // Repair any day that lost coverage.
-  validateCoverage(state.schedule, year, month);
-  syncPrimaryAssignments();
-  saveSchedule();
-  render();
-  toast(`Cleared ${emp}'s schedule — ${cleared} cell${cleared !== 1 ? 's' : ''} cleared, ${preserved} locked preserved`, 'warn');
-}
-
-/** Open the Clear Employee modal and populate the employee dropdown. */
-function openClearEmployeeModal() {
-  const modal = document.getElementById('clearEmployeeModal');
-  const select = document.getElementById('clearEmployeeSelect');
-  if (!modal || !select) return;
-
-  // Populate the employee dropdown
-  select.innerHTML = '';
-  EMPLOYEES.forEach(emp => {
-    const opt = document.createElement('option');
-    opt.value = emp;
-    opt.textContent = emp;
-    select.appendChild(opt);
-  });
-
-  // Show the preview for the first employee by default
-  updateClearEmployeePreview();
-
-  // Update preview when selection changes
-  select.onchange = updateClearEmployeePreview;
-
-  modal.classList.add('open');
-}
-
-function updateClearEmployeePreview() {
-  const select = document.getElementById('clearEmployeeSelect');
-  const preview = document.getElementById('clearEmployeePreview');
-  const content = document.getElementById('clearEmployeePreviewContent');
-  if (!select || !preview || !content) return;
-
-  const emp = select.value;
-  if (!emp) {
-    preview.style.display = 'none';
+function showConfigValidation(module, msg, type = 'error') {
+  const el = document.getElementById(module + 'Validation');
+  if (!el) return;
+  if (!msg) {
+    el.classList.remove('show', 'error', 'success');
+    el.textContent = '';
     return;
   }
-
-  const { year, month } = state;
-  const totalDays = daysInMonth(year, month);
-  const counts = {};
-  let locked = 0;
-  let clearable = 0;
-  for (let d = 1; d <= totalDays; d++) {
-    const key = dateKey(year, month, d);
-    const v = (state.schedule[key] || {})[emp];
-    if (!v) continue;
-    counts[v] = (counts[v] || 0) + 1;
-    if (LOCKED_SHIFTS.has(v)) locked++;
-    else clearable++;
-  }
-
-  const sortedShifts = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  const shiftList = sortedShifts.length > 0
-    ? sortedShifts.map(([code, n]) => `<span style="display:inline-block;background:${getShiftColorVar(code)};color:${code === 'OH' || code === 'FILLER' ? 'white' : (code === 'OH' ? 'white' : 'white')};padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;margin:2px 4px 2px 0;">${code}: ${n}</span>`).join('')
-    : '<em style="color:var(--text-muted);">No schedule data</em>';
-
-  const isFiller = (Array.isArray(state.fillerEmployees) && state.fillerEmployees.includes(emp)) || state.fillerEmployee === emp;
-  content.innerHTML = `
-    <div style="margin-bottom: 8px;"><strong style="color:var(--text);">${emp}</strong>${isFiller ? ' <span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;margin-left:4px;">FILLER</span>' : ''}</div>
-    <div style="margin-bottom: 8px;">${shiftList}</div>
-    <div style="color:var(--text);">⚠️ Will clear <strong>${clearable}</strong> cell${clearable !== 1 ? 's' : ''}, preserve <strong>${locked}</strong> locked cell${locked !== 1 ? 's' : ''}.</div>
-  `;
-  preview.style.display = 'block';
+  el.classList.add('show');
+  el.classList.toggle('error',   type === 'error');
+  el.classList.toggle('success', type === 'success');
+  el.textContent = msg;
 }
 
-function closeClearEmployeeModal() {
-  const modal = document.getElementById('clearEmployeeModal');
-  if (modal) modal.classList.remove('open');
-}
-
-/** Recalculate `lastMonthAssignments` from the schedule. */
-function syncPrimaryAssignments() {
-  state.rotationMemory.lastMonthAssignments =
-    computePrimaryAssignmentsFromSchedule(state.year, state.month);
-}
-
-/** Hard wipe. */
-function clearAll() {
-  state = defaultState();
-  state._ohPointerSetFor = '';
-
-  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-
-  document.getElementById('monthSelect').value = state.month;
-  document.getElementById('yearSelect').value = state.year;
-
-  document.documentElement.dataset.theme = state.theme;
-  document.getElementById('themeToggle').textContent = '🌙';
-
-  const empSel   = document.getElementById('filterEmployee');
-  const shiftSel = document.getElementById('filterShift');
-  empSel.innerHTML   = '<option value="">All Employees</option>';
-  shiftSel.innerHTML = '<option value="">All Shifts</option>';
-  EMPLOYEES.forEach(e => {
-    const o = document.createElement('option'); o.value = e; o.textContent = e;
-    empSel.appendChild(o);
-  });
-  SHIFT_CODES.forEach(c => {
-    const o = document.createElement('option'); o.value = c; o.textContent = c;
-    shiftSel.appendChild(o);
-  });
-
-  populateRotationControls();
-
-  filterState = { employee: '', shift: '', mode: 'all' };
-  document.querySelectorAll('.filter-chip').forEach(b => {
-    b.classList.toggle('active', b.dataset.filter === 'all');
-  });
-
-  render();
-  toast('All data cleared — scheduler reset', 'warn');
-}
-
-/* =====================================================================
-   STATISTICS
-   ===================================================================== */
-
-function emptyStats() {
-  return {
-    'AP-P': 0, 'AP-B': 0, 'AP-PB': 0,
-    'EU-P': 0, 'EU-B': 0, 'EU-PB': 0,
-    'NA-P': 0, 'NA-B': 0, 'NA-PB': 0,
-    'OH': 0, 'FILLER': 0, 'OFF': 0,
-    'VL': 0, 'EL': 0, 'SL': 0, 'ML': 0, 'HOL': 0, 'CO': 0,
-    'RTO': 0, 'TRNG': 0,
-    workingDays: 0, nightShifts: 0,
-    weekendShifts: 0, weekdayShifts: 0,
-    totalHours: 0, workloadPct: 0
-  };
-}
-
-function calculateStatistics() {
-  const { year, month } = state;
-  const stats = {};
-  for (const e of EMPLOYEES) stats[e] = emptyStats();
-
-  const totalDays = daysInMonth(year, month);
-  for (let d = 1; d <= totalDays; d++) {
-    const key = dateKey(year, month, d);
-    const row = state.schedule[key];
-    if (!row) continue;
-    const wkend = isWeekend(year, month, d);
-    for (const e of EMPLOYEES) {
-      const s = row[e];
-      if (!s) continue;
-      if (stats[e][s] !== undefined) stats[e][s] += 1;
-      if (s !== 'OFF') {
-        stats[e].workingDays += 1;
-        stats[e].totalHours += SHIFT_HOURS[s] || 0;
-      }
-      if (SHIFT_BUCKET[s] === 'night') stats[e].nightShifts += 1;
-      if (wkend && s !== 'OFF') stats[e].weekendShifts += 1;
-      if (!wkend && s !== 'OFF') stats[e].weekdayShifts += 1;
-    }
+function showLeaveValidation(msg, type = 'error') {
+  const el = document.getElementById('leaveValidation');
+  if (!el) return;
+  if (!msg) {
+    el.classList.remove('show', 'error', 'success');
+    el.textContent = '';
+    return;
   }
-  for (const e of EMPLOYEES) {
-    stats[e].workloadPct = totalDays > 0
-      ? Math.round((stats[e].workingDays / totalDays) * 100)
-      : 0;
-  }
-  return stats;
-}
-
-/* =====================================================================
-   COVERAGE
-   ===================================================================== */
-
-function checkCoverage() {
-  const { year, month } = state;
-  const firstKey = dateKey(year, month, 1);
-  const row = state.schedule[firstKey];
-  if (!row) {
-    return { ok: false, message: 'No schedule generated yet', chips: [], missing: [], covered: [] };
-  }
-
-  const primaryRow = computePrimaryAssignmentsFromSchedule(year, month);
-  const shiftCounts = {};
-  for (const emp of EMPLOYEES) {
-    const s = primaryRow[emp];
-    shiftCounts[s] = (shiftCounts[s] || 0) + 1;
-  }
-
-  const covered = [];
-  const missing = [];
-
-  if ((shiftCounts['AP-P'] || 0) > 0 || (shiftCounts['AP-PB'] || 0) > 0) {
-    if ((shiftCounts['AP-P'] || 0) > 0) covered.push({ code: 'AP-P', count: shiftCounts['AP-P'] });
-    else covered.push({ code: 'AP-PB', count: shiftCounts['AP-PB'], note: 'combined' });
-  } else if ((shiftCounts['AP-B'] || 0) > 0) {
-    covered.push({ code: 'AP-B', count: shiftCounts['AP-B'], note: 'backup' });
-  } else {
-    missing.push('AP');
-  }
-
-  const euCount = (shiftCounts['EU-P'] || 0) + (shiftCounts['EU-B'] || 0);
-  if (shiftCounts['EU-PB']) {
-    covered.push({ code: 'EU-PB', count: shiftCounts['EU-PB'], note: 'combined' });
-  } else if (euCount >= 2) {
-    if (shiftCounts['EU-P']) covered.push({ code: 'EU-P', count: shiftCounts['EU-P'] });
-    if (shiftCounts['EU-B']) covered.push({ code: 'EU-B', count: shiftCounts['EU-B'] });
-  } else {
-    missing.push('EU-P', 'EU-B');
-  }
-
-  const naCount = (shiftCounts['NA-P'] || 0) + (shiftCounts['NA-B'] || 0);
-  if (shiftCounts['NA-PB']) {
-    covered.push({ code: 'NA-PB', count: shiftCounts['NA-PB'], note: 'combined' });
-  } else if (naCount >= 2) {
-    if (shiftCounts['NA-P']) covered.push({ code: 'NA-P', count: shiftCounts['NA-P'] });
-    if (shiftCounts['NA-B']) covered.push({ code: 'NA-B', count: shiftCounts['NA-B'] });
-  } else {
-    missing.push('NA-P', 'NA-B');
-  }
-
-  if (shiftCounts['OH']) covered.push({ code: 'OH', count: shiftCounts['OH'], optional: true });
-  if (shiftCounts['FILLER']) covered.push({ code: 'FILLER', count: shiftCounts['FILLER'], optional: true, note: 'on-call cover' });
-
-  const ok = missing.length === 0;
-  return { ok, covered, missing };
-}
-
-function renderCoverageBanner() {
-  const c = checkCoverage();
-  const banner = document.getElementById('coverageBanner');
-  const text = document.getElementById('coverageText');
-  banner.className = 'coverage-banner ' + (c.ok ? 'ok' : 'warn');
-
-  if (c.ok) {
-    const chips = c.covered.map(s =>
-      `<span class="chip" style="background:${getShiftColorVar(s.code)}">${s.code}${s.note ? ' (' + s.note + ')' : ''}</span>`
-    ).join('');
-    text.innerHTML = `✓ All primary shifts covered for 24/7 operation — ${chips}`;
-  } else {
-    const missingChips = c.missing.map(s =>
-      `<span class="chip" style="background:#ef4444">${s} missing</span>`
-    ).join('');
-    text.innerHTML = `⚠ Coverage gaps — ${missingChips}`;
-  }
+  el.classList.add('show');
+  el.classList.toggle('error',   type === 'error');
+  el.classList.toggle('success', type === 'success');
+  el.textContent = msg;
 }
 
 /* =====================================================================
@@ -3444,8 +2460,8 @@ function getShiftColorVar(code) {
     'NA-B':  'var(--shift-na-b)',
     'NA-PB': 'var(--shift-na-p)',
     'OH':    'var(--shift-oh)',
-    'FILLER':'var(--shift-filler)',
     'OFF':   'var(--shift-off)',
+    'VL':    'var(--shift-lv)',
     'VL':    'var(--shift-vl)',
     'EL':    'var(--shift-el)',
     'SL':    'var(--shift-sl)',
@@ -3458,7 +2474,6 @@ function getShiftColorVar(code) {
   return map[code] || 'var(--text-muted)';
 }
 
-/** Concrete hex value, used by the Excel exporter. */
 function getShiftColorHex(code) {
   const map = {
     'AP-P':  '#00b050',
@@ -3471,8 +2486,8 @@ function getShiftColorHex(code) {
     'NA-B':  '#d2691e',
     'NA-PB': '#ff8c2a',
     'OH':    '#ffffff',
-    'FILLER':'#8b5cf6',
     'OFF':   '#b0b0b0',
+    'VL':    '#f97316',
     'VL':    '#bcd9ff',
     'EL':    '#f59e0b',
     'SL':    '#f59e0b',
@@ -3486,233 +2501,17 @@ function getShiftColorHex(code) {
 }
 
 /* =====================================================================
-   UPDATE DASHBOARD
+   RENDERING
    ===================================================================== */
 
-function updateDashboard() {
-  const { year, month } = state;
-  const totalDays = daysInMonth(year, month);
-  const firstKey = dateKey(year, month, 1);
-  const dayOneRow = state.schedule[firstKey] || {};
-
-  const row = computePrimaryAssignmentsFromSchedule(year, month);
-  if (!row || Object.keys(row).length === 0) {
-    document.getElementById('dashboard').innerHTML = '';
-    return;
-  }
-
-  const shiftCounts = {};
-  for (const emp of EMPLOYEES) {
-    const s = row[emp];
-    shiftCounts[s] = (shiftCounts[s] || 0) + 1;
-  }
-
-  const workingCount = EMPLOYEES.filter(e => row[e] && row[e] !== 'OFF').length;
-  const offCount = shiftCounts['OFF'] || 0;
-  const ohCount = shiftCounts['OH'] || 0;
-  const vlCount = shiftCounts['VL'] || 0;
-
-  const dayShift = dayOneRow;
-  let dailyStaffing = 0;
-  for (const emp of EMPLOYEES) {
-    const s = dayShift[emp];
-    if (['AP-P','AP-B','EU-P','EU-B','NA-P','NA-B','AP-PB','EU-PB','NA-PB'].includes(s)) {
-      dailyStaffing += 1;
-    }
-  }
-  const dailyWithOH = dailyStaffing + ohCount;
-
-  let totalWorkloadDays = 0;
-  let totalOffDays = 0;
-  for (let d = 1; d <= totalDays; d++) {
-    const r = state.schedule[dateKey(year, month, d)] || {};
-    for (const e of EMPLOYEES) {
-      const v = r[e];
-      if (v && v !== 'OFF') totalWorkloadDays += 1;
-      else if (v === 'OFF') totalOffDays += 1;
-    }
-  }
-  const avgWorkload = EMPLOYEES.length > 0
-    ? (totalWorkloadDays / EMPLOYEES.length).toFixed(1)
-    : 0;
-
-  const ohForThisMonth = assignMonthlyOH();
-  const fillersList = (state.fillerEmployees && state.fillerEmployees.length)
-    ? state.fillerEmployees
-    : (state.currentPrimaryShifts && state.currentPrimaryShifts.fillerEmployees) || [];
-  const fillersDisplay = fillersList.length
-    ? fillersList.map(f => f.split(' ')[0]).join(' · ')
-    : '—';
-  const fillersSub = fillersList.length
-    ? `${fillersList.join(', ')} — leave-only coverage (AP-PB / EU / NA)`
-    : 'no fillers designated';
-
-  const cards = [
-    { label: 'Current Month', value: MONTH_NAMES[month], sub: year, icon: '📅', color: '#4f46e5' },
-    { label: 'Monthly OH', value: ohForThisMonth.split(' ')[0], sub: `${ohForThisMonth} — full month`, icon: '📞', color: '#22c55e' },
-    { label: `Monthly Fillers (${fillersList.length || 0})`, value: fillersDisplay, sub: fillersSub, icon: '🛟', color: '#8b5cf6' },
-    { label: 'Daily Coverage', value: dailyStaffing, sub: `people covering 24/7${ohCount ? ' (+' + ohCount + ' OH)' : ''}`, icon: '👥', color: '#10b981' },
-    { label: 'On Shift', value: workingCount, sub: 'employees with active shifts', icon: '✅', color: '#3b82f6' },
-    { label: 'On OFF', value: offCount, sub: 'resting this month', icon: '🌙', color: '#fbbf24' },
-    { label: 'On OH', value: ohCount, sub: 'office hours coverage', icon: '📞', color: '#22c55e' },
-    { label: 'Total OFF Days', value: totalOffDays, sub: 'sum of all OFF entries', icon: '🛌', color: '#f59e0b' },
-    { label: 'Avg Workdays / Employee', value: avgWorkload, sub: 'avg working days', icon: '⚖', color: '#ec4899' },
-    { label: 'Rotation Cycle', value: state.rotationMemory.monthCount, sub: 'OH employee index', icon: '🔄', color: '#a855f7' }
-  ];
-
-  const html = cards.map(c => `
-    <div class="dash-card" style="--card-accent: ${c.color}">
-      <div class="label">${c.label}</div>
-      <div class="value">${c.value}</div>
-      <div class="sub">${c.sub}</div>
-      <div class="icon">${c.icon}</div>
-    </div>
-  `).join('');
-
-  document.getElementById('dashboard').innerHTML = html;
-}
-
-/* =====================================================================
-   RENDER MONTHLY ASSIGNMENTS PANEL
-   ===================================================================== */
-
-function renderMonthlyAssignments() {
-  const { year, month } = state;
-  const primaryRow = computePrimaryAssignmentsFromSchedule(year, month);
-
-  if (!primaryRow || Object.keys(primaryRow).length === 0) {
-    document.getElementById('monthlyAssignments').innerHTML =
-      '<div style="color:var(--text-muted);font-size:13px;">No schedule generated yet. Click "Generate Schedule" above.</div>';
-    return;
-  }
-
-  const shiftPriority = {
-    'AP-PB': 0,
-    'AP-P': 1, 'AP-B': 2,
-    'EU-P': 3, 'EU-B': 4, 'EU-PB': 5,
-    'NA-P': 6, 'NA-B': 7, 'NA-PB': 8,
-    'OH': 9, 'FILLER': 9.5, 'OFF': 10,
-    'VL': 11, 'EL': 12, 'SL': 13, 'ML': 14,
-    'HL': 14, 'COL': 14,
-    'HOL': 15, 'CO': 16, 'RTO': 17, 'TRNG': 18
-  };
-  const sorted = [...EMPLOYEES].sort((a, b) => {
-    const pa = shiftPriority[primaryRow[a]] ?? 99;
-    const pb = shiftPriority[primaryRow[b]] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return a.localeCompare(b);
-  });
-
-  // Group temporary coverage by employee for display
-  const tempCoverageByEmp = {};
-  for (const tc of (state.currentTempCoverage || [])) {
-    if (!tempCoverageByEmp[tc.employee]) tempCoverageByEmp[tc.employee] = [];
-    tempCoverageByEmp[tc.employee].push(tc);
-  }
-
-  const html = sorted.map(emp => {
-    const primary    = primaryRow[emp] || 'OFF';
-    const color      = getShiftColorVar(primary);
-    const initials   = getInitials(emp);
-    const primaryTime = SHIFT_TIMES[primary] || '';
-    const isActive   = filterState.employee === emp;
-    const isFiller   = (Array.isArray(state.fillerEmployees) && state.fillerEmployees.includes(emp)) ||
-                       (state.currentPrimaryShifts && Array.isArray(state.currentPrimaryShifts.fillerEmployees) && state.currentPrimaryShifts.fillerEmployees.includes(emp));
-
-    // Calculate the actual breakdown from the schedule (for count display)
-    const breakdown  = getEmployeeShiftBreakdown(emp, year, month);
-    const primaryDays = breakdown.find(([c]) => c === primary)?.[1] || 0;
-    const primaryHours = (SHIFT_HOURS[primary] || 0) * primaryDays;
-
-    const tempCoverages = tempCoverageByEmp[emp] || [];
-    const tempHtml = tempCoverages.length > 0
-      ? `<div class="assignment-coverage">
-          <span class="assignment-coverage-title">Temporary Coverage</span>
-          ${tempCoverages.map(tc => {
-            const tcColor = getShiftColorVar(tc.shift);
-            const startStr = formatDayLabel(tc.startDay, month);
-            const endStr   = formatDayLabel(tc.endDay, month);
-            const rangeStr = tc.startDay === tc.endDay ? startStr : `${startStr} – ${endStr}`;
-            return `<div class="assignment-coverage-row">
-              <span class="assignment-coverage-date">${rangeStr}</span>
-              <span class="assignment-coverage-shift" style="background:${tcColor}">${tc.shift}</span>
-            </div>`;
-          }).join('')}
-        </div>`
-      : `<div class="assignment-coverage">
-          <span class="assignment-coverage-title">Temporary Coverage</span>
-          <span class="assignment-time">None</span>
-        </div>`;
-
-    const fillerBadge = isFiller
-      ? `<span style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);color:white;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:0.05em;margin-left:6px;box-shadow:0 2px 4px rgba(139,92,246,0.3);">🛟 FILLER</span>`
-      : '';
-
-    return `
-      <div class="assignment-card${isActive ? ' is-active' : ''}">
-        <div class="assignment-avatar" style="background:${color}">${initials}</div>
-        <div class="assignment-info">
-          <div class="assignment-name" title="${emp}">${emp}${fillerBadge}</div>
-          <div class="assignment-primary-block">
-            <span class="assignment-primary-label">Primary Shift</span>
-            <div class="assignment-primary-row">
-              <span class="assignment-shift" style="background:${color}">${primary}</span>
-              <span class="assignment-time">${primaryTime}</span>
-            </div>
-            <span class="assignment-time">${primaryDays} day${primaryDays !== 1 ? 's' : ''}${primary !== 'OFF' && SHIFT_HOURS[primary] ? ' · ' + primaryHours + 'h' : ''}</span>
-          </div>
-          ${tempHtml}
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  document.getElementById('monthlyAssignments').innerHTML = html;
-}
-
-/* Helper to render a day label like "12 Jul" from a day number + month */
-function formatDayLabel(day, month) {
-  return `${day} ${MONTH_NAMES_SHORT[month] || ''}`;
-}
-
-/* =====================================================================
-   RENDER SCHEDULE TABLE
-   ===================================================================== */
-
-function render() {
-  renderMonthlyAssignments();
+/** Master render — re-renders all derived UI from state. */
+function renderSchedule() {
   renderScheduleTable();
   renderStatsTable();
   renderMonthlyShiftAssignment();
   renderLegend();
-  renderCoverageBanner();
-  updateDashboard();
   document.getElementById('scheduleMonthLabel').textContent =
     MONTH_NAMES[state.month] + ' ' + state.year + ' Schedule';
-}
-
-function syncFilterSelects() {
-  const empSel = document.getElementById('filterEmployee');
-  const shiftSel = document.getElementById('filterShift');
-  if (empSel.options.length <= 1) {
-    EMPLOYEES.forEach(e => {
-      const opt = document.createElement('option');
-      opt.value = e; opt.textContent = e;
-      empSel.appendChild(opt);
-    });
-  }
-  if (shiftSel.options.length <= 1) {
-    SHIFT_CODES.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s; opt.textContent = s;
-      shiftSel.appendChild(opt);
-    });
-  }
-  empSel.value = filterState.employee;
-  shiftSel.value = filterState.shift;
-  document.querySelectorAll('.filter-chip').forEach(b => {
-    b.classList.toggle('active', b.dataset.filter === filterState.mode);
-  });
 }
 
 function shiftClass(code) {
@@ -3720,14 +2519,28 @@ function shiftClass(code) {
   return 'shift-' + code.toLowerCase().replace(/[^a-z0-9]/g, '-');
 }
 
-/**
- * Build a DocumentFragment for the schedule table in one go — avoids
- * repeated layout reflows from re-rendering 30+ rows × N cols.
- */
+/** Returns a per-employee map of the most-frequent rendered shift. */
+function computePrimaryAssignmentsFromSchedule(year, month) {
+  const out = {};
+  for (const emp of EMPLOYEES) out[emp] = '';
+  for (let d = 1; d <= daysInMonth(year, month); d++) {
+    const key = dateKey(year, month, d);
+    const row = state.schedule[key];
+    if (!row) continue;
+    for (const emp of EMPLOYEES) {
+      const v = row[emp];
+      if (!v) continue;
+      if (!out[emp]) out[emp] = v;        // first non-empty wins
+    }
+  }
+  return out;
+}
+
 function renderScheduleTable() {
   const { year, month } = state;
   const totalDays = daysInMonth(year, month);
   const table = document.getElementById('scheduleTable');
+  if (!table) return;
 
   const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
 
@@ -3737,14 +2550,17 @@ function renderScheduleTable() {
   headRow.appendChild(makeTh('Date', 'sticky-col'));
   headRow.appendChild(makeTh('Day', 'sticky-col-2'));
   EMPLOYEES.forEach(emp => {
-    const monthlyShift = firstRow[emp] || 'OFF';
-    const color = getShiftColorVar(monthlyShift);
+    const monthlyShift = firstRow[emp] || '';
+    const color = monthlyShift ? getShiftColorVar(monthlyShift) : 'var(--text-muted)';
+    const pill  = monthlyShift
+      ? `<span class="monthly-shift-header" style="background:${color}">${monthlyShift}</span>`
+      : `<span class="monthly-shift-header" style="background:var(--text-muted)">—</span>`;
     const parts = emp.split(' ');
     const first = parts.shift();
     const th = document.createElement('th');
     th.innerHTML = `${escapeHtml(first)}<br>
       <small style="font-weight:400;opacity:0.7">${escapeHtml(parts.join(' '))}</small><br>
-      <span class="monthly-shift-header" style="background:${color}">${monthlyShift}</span>`;
+      ${pill}`;
     headRow.appendChild(th);
   });
   thead.appendChild(headRow);
@@ -3796,16 +2612,7 @@ function renderScheduleTable() {
       sel.className = 'cell-select';
       sel.dataset.emp = emp;
       sel.dataset.day = d;
-      // When the cell value is empty (e.g. after Clear All, or any
-      // schedule that was never generated), prepend an empty <option>
-      // and mark it as selected. This stops the browser from
-      // displaying the FIRST shift code ("AP-P") as a default. The
-      // cell now renders truly blank until the user explicitly picks
-      // a shift from the dropdown.
-      const emptyOpt = (s === '')
-        ? `<option value="" selected></option>`
-        : '';
-      sel.innerHTML = emptyOpt + SHIFT_CODES.map(c =>
+      sel.innerHTML = '<option value=""></option>' + SHIFT_CODES.map(c =>
         `<option value="${c}" ${c === s ? 'selected' : ''}>${c}</option>`
       ).join('');
       td.appendChild(sel);
@@ -3827,80 +2634,55 @@ function makeTh(text, cls) {
   return th;
 }
 
-/** Tiny HTML escape (only used for user-provided names). */
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-  ));
-}
-
 /* =====================================================================
-   EVENT DELEGATION — single change handler for the schedule table.
-   ---------------------------------------------------------------------
-   • When a cell becomes a leave code (VL / SL / EL / ML / HOL / CO)
-     or an OFF / RTO / TRNG, the affected day is automatically
-     rebalanced while preserving all locked cells.
-   • Any other change is treated as a manual override (no auto-shift).
+   STATISTICS
    ===================================================================== */
 
-function onScheduleTableChange(e) {
-  const sel = e.target;
-  if (!(sel instanceof HTMLSelectElement)) return;
-  if (!sel.classList.contains('cell-select')) return;
+function emptyStats() {
+  return {
+    'AP-P': 0, 'AP-B': 0, 'AP-PB': 0,
+    'EU-P': 0, 'EU-B': 0, 'EU-PB': 0,
+    'NA-P': 0, 'NA-B': 0, 'NA-PB': 0,
+    'OH': 0, 'OFF': 0, 'VL': 0,
+    'VL': 0, 'EL': 0, 'SL': 0, 'ML': 0, 'HOL': 0, 'CO': 0,
+    'RTO': 0, 'TRNG': 0,
+    workingDays: 0, nightShifts: 0,
+    weekendShifts: 0, weekdayShifts: 0,
+    totalHours: 0, workloadPct: 0
+  };
+}
 
-  const emp = sel.dataset.emp;
-  const day = parseInt(sel.dataset.day, 10);
-  const newShift = sel.value;
-  const key = dateKey(state.year, state.month, day);
+function calculateStatistics() {
+  const { year, month } = state;
+  const stats = {};
+  for (const e of EMPLOYEES) stats[e] = emptyStats();
 
-  if (!state.schedule[key]) state.schedule[key] = {};
-
-  const prev = state.schedule[key][emp];
-  state.schedule[key][emp] = newShift;
-
-  // Mirror VL into the legacy VL map.
-  if (newShift === 'VL') {
-    if (!state.vl[key]) state.vl[key] = [];
-    if (!state.vl[key].includes(emp)) state.vl[key].push(emp);
-  } else if (prev === 'VL') {
-    if (state.vl[key]) {
-      state.vl[key] = state.vl[key].filter(x => x !== emp);
-      if (state.vl[key].length === 0) delete state.vl[key];
+  const totalDays = daysInMonth(year, month);
+  for (let d = 1; d <= totalDays; d++) {
+    const key = dateKey(year, month, d);
+    const row = state.schedule[key];
+    if (!row) continue;
+    const wkend = isWeekend(year, month, d);
+    for (const e of EMPLOYEES) {
+      const s = row[e];
+      if (!s) continue;
+      if (stats[e][s] !== undefined) stats[e][s] += 1;
+      if (s !== 'OFF') {
+        stats[e].workingDays += 1;
+        stats[e].totalHours += SHIFT_HOURS[s] || 0;
+      }
+      if (SHIFT_BUCKET[s] === 'night') stats[e].nightShifts += 1;
+      if (wkend && s !== 'OFF') stats[e].weekendShifts += 1;
+      if (!wkend && s !== 'OFF') stats[e].weekdayShifts += 1;
     }
   }
-
-  // LIVE REBALANCE — fires whenever the user adds a leave or OFF day.
-  if (LEAVE_CODES.has(newShift)) {
-    rebalanceForLeave(day);
+  for (const e of EMPLOYEES) {
+    stats[e].workloadPct = totalDays > 0
+      ? Math.round((stats[e].workingDays / totalDays) * 100)
+      : 0;
   }
-
-  // Live update of the cell color + tiny pulse
-  const td = sel.closest('td');
-  if (td) {
-    td.className = shiftClass(newShift);
-    td.classList.add('pulse');
-    setTimeout(() => td.classList.remove('pulse'), 400);
-  }
-
-  // After a leave change, the previously-rendered cell dropdowns are stale
-  // (other employees may have moved). We must re-render the whole row to
-  // show the new assignments.
-  if (LEAVE_CODES.has(newShift)) {
-    renderScheduleTable();
-  }
-
-  syncPrimaryAssignments();
-  renderStatsTable();
-  renderMonthlyShiftAssignment();
-  renderMonthlyAssignments();
-  renderCoverageBanner();
-  updateDashboard();
-  saveSchedule();
+  return stats;
 }
-
-/* =====================================================================
-   STATISTICS TABLE
-   ===================================================================== */
 
 function renderStatsTable() {
   const stats = calculateStatistics();
@@ -3908,7 +2690,7 @@ function renderStatsTable() {
     'AP-P', 'AP-B', 'AP-PB',
     'EU-P', 'EU-B', 'EU-PB',
     'NA-P', 'NA-B', 'NA-PB',
-    'OH', 'FILLER', 'OFF',
+    'OH', 'OFF', 'VL',
     'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
     'RTO', 'TRNG',
     'Working', 'Night', 'Hours', 'Workload %'
@@ -3972,37 +2754,22 @@ function renderMonthlyShiftAssignment() {
   const stats = calculateStatistics();
 
   const MSA_COLS = [
-    { key: 'RTO',   label: 'RTO',                     kind: 'cyan'   },
-    { key: 'OFF',   label: 'OFF',                     kind: 'yellow' },
-    { key: 'AP-P',  label: 'AP-P',                    kind: 'green'  },
-    { key: 'EU-P',  label: 'EU-P',                    kind: 'cyan'   },
-    { key: 'NA-P',  label: 'NA-P',                    kind: 'yellow' },
-    { key: 'AP-B',  label: 'AP-B',                    kind: 'red'    },
-    { key: 'EU-B',  label: 'EU-B',                    kind: 'cyan'   },
-    { key: 'NA-B',  label: 'NA-B',                    kind: 'yellow' },
-    { key: 'OH',    label: 'OH',                      kind: 'green'  },
-    { key: 'FILLER',label: 'FILLER',                  kind: 'purple' },
-    { key: 'AP-PB', label: 'AP-PB',                   kind: 'green'  },
-    { key: 'NA-PB', label: 'NA-PB',                   kind: 'yellow' },
-    { key: 'EU-PB', label: 'EU-PB',                   kind: 'cyan'   },
-    { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO',      kind: 'yellow' },
-    { key: 'TRNG',  label: 'TRNG',                    kind: 'purple' }
+    { key: 'RTO',   label: 'RTO',                kind: 'cyan'   },
+    { key: 'OFF',   label: 'OFF',                kind: 'yellow' },
+    { key: 'AP-P',  label: 'AP-P',               kind: 'green'  },
+    { key: 'EU-P',  label: 'EU-P',               kind: 'cyan'   },
+    { key: 'NA-P',  label: 'NA-P',               kind: 'yellow' },
+    { key: 'AP-B',  label: 'AP-B',               kind: 'red'    },
+    { key: 'EU-B',  label: 'EU-B',               kind: 'cyan'   },
+    { key: 'NA-B',  label: 'NA-B',               kind: 'yellow' },
+    { key: 'OH',    label: 'OH',                 kind: 'green'  },
+    { key: 'AP-PB', label: 'AP-PB',              kind: 'green'  },
+    { key: 'NA-PB', label: 'NA-PB',              kind: 'yellow' },
+    { key: 'EU-PB', label: 'EU-PB',              kind: 'cyan'   },
+    { key: 'VL',    label: 'VL (Leave)',         kind: 'red'    },
+    { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO', kind: 'yellow' },
+    { key: 'TRNG',  label: 'TRNG',               kind: 'purple' }
   ];
-
-  let html = '<thead><tr>';
-  html += '<th class="col-shift">Shift</th>';
-  html += '<th class="col-desc">Description</th>';
-  for (const c of MSA_COLS) {
-    html += `<th>${c.label}</th>`;
-  }
-  html += '</tr></thead><tbody>';
-
-  if (!firstRow || Object.keys(firstRow).length === 0) {
-    html += `<tr><td colspan="${MSA_COLS.length + 2}" style="padding:30px;color:var(--text-muted);">No schedule generated yet. Click "Generate Schedule" above to populate the Monthly Shift Assignment table.</td></tr>`;
-    html += '</tbody>';
-    document.getElementById('monthlyShiftTable').innerHTML = html;
-    return;
-  }
 
   const valueFor = (emp, key) => {
     const s = stats[emp];
@@ -4012,6 +2779,21 @@ function renderMonthlyShiftAssignment() {
     }
     return s[key] || 0;
   };
+
+  let html = '<thead><tr>';
+  html += '<th class="col-shift">Shift</th>';
+  html += '<th class="col-desc">Description</th>';
+  for (const c of MSA_COLS) {
+    html += `<th>${c.label}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  if (!state.scheduleBuilt) {
+    html += `<tr><td colspan="${MSA_COLS.length + 2}" style="padding:30px;color:var(--text-muted);">No schedule generated yet. Click <strong>Create Schedule</strong> above to populate the Monthly Shift Assignment table.</td></tr>`;
+    html += '</tbody>';
+    document.getElementById('monthlyShiftTable').innerHTML = html;
+    return;
+  }
 
   for (const emp of EMPLOYEES) {
     const primaryShift = firstRow[emp] || 'OFF';
@@ -4066,25 +2848,62 @@ function renderLegend() {
   const codes = [
     'AP-P','AP-B','EU-P','EU-B','NA-P','NA-B',
     'AP-PB','EU-PB','NA-PB',
-    'OH','FILLER','OFF',
+    'OH','OFF','VL',
     'VL','EL','SL','ML','HOL','CO',
     'RTO','TRNG'
   ];
   const html = codes.map(code => {
     const col = getShiftColorVar(code);
     const time = SHIFT_TIMES[code] || '';
-    const borderStyle = (code === 'OH' || code === 'RTO') ? 'border:1px solid var(--border-strong);' : '';
-    const darkBorder = (code === 'OH' || code === 'RTO') ? 'border:1px solid #475569;' : '';
     const isDark = document.documentElement.dataset.theme === 'dark';
+    const borderStyle = (code === 'OH' || code === 'RTO')
+      ? `border:1px solid ${isDark ? '#475569' : 'var(--border-strong)'};`
+      : '';
     return `
       <div class="legend-item">
-        <span class="legend-swatch" style="background:${col}; ${isDark ? darkBorder : borderStyle}"></span>
+        <span class="legend-swatch" style="background:${col}; ${borderStyle}"></span>
         <span>${code}</span>
         ${time ? `<span class="legend-time">${time}</span>` : ''}
       </div>
     `;
   }).join('');
   document.getElementById('legend').innerHTML = html;
+}
+
+/* =====================================================================
+   DASHBOARD
+   ===================================================================== */
+
+function updateDashboard() {
+  const { year, month } = state;
+  const totalDays = daysInMonth(year, month);
+  const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
+
+  const configuredDayOff = EMPLOYEES.filter(e => state.dayOffConfig[e]).length;
+  const configuredRot    = EMPLOYEES.filter(e => state.rotationPattern[e]).length;
+  const totalLeaves      = (state.leaveRequests || []).length;
+  const approvedLeaves   = (state.leaveRequests || []).filter(l => l.approved).length;
+  const filled           = countScheduleCells();
+
+  const cards = [
+    { label: 'Current Month',   value: MONTH_NAMES[month], sub: year,                       icon: '📅', color: '#4f46e5' },
+    { label: 'Day Offs Set',    value: `${configuredDayOff}/${EMPLOYEES.length}`, sub: 'employees with a weekly off pair',  icon: '📆', color: '#22c55e' },
+    { label: 'Rotations Set',   value: `${configuredRot}/${EMPLOYEES.length}`, sub: 'employees with a default shift',     icon: '🔁', color: '#10b981' },
+    { label: 'Leave Requests',  value: totalLeaves, sub: `${approvedLeaves} approved`, icon: '🌴', color: '#f59e0b' },
+    { label: 'Schedule Cells',  value: filled, sub: `of ${totalDays * EMPLOYEES.length} possible`, icon: '🛠', color: '#3b82f6' },
+    { label: 'Status',          value: state.scheduleBuilt ? 'Ready' : 'Not built', sub: state.scheduleBuilt ? 'click Clear Schedule to reset' : 'click Create Schedule', icon: state.scheduleBuilt ? '✅' : '⚠️', color: state.scheduleBuilt ? '#10b981' : '#a855f7' }
+  ];
+
+  const html = cards.map(c => `
+    <div class="dash-card" style="--card-accent: ${c.color}">
+      <div class="label">${c.label}</div>
+      <div class="value">${c.value}</div>
+      <div class="sub">${c.sub}</div>
+      <div class="icon">${c.icon}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('dashboard').innerHTML = html;
 }
 
 /* =====================================================================
@@ -4121,7 +2940,7 @@ function exportCSV() {
     'Employee', 'AP-P', 'AP-B', 'AP-PB',
     'EU-P', 'EU-B', 'EU-PB',
     'NA-P', 'NA-B', 'NA-PB',
-    'OH', 'FILLER', 'OFF',
+    'OH', 'OFF', 'VL',
     'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
     'RTO', 'TRNG',
     'Working', 'Night', 'Hours', 'Workload %'
@@ -4135,7 +2954,7 @@ function exportCSV() {
       s['AP-P'], s['AP-B'], s['AP-PB'],
       s['EU-P'], s['EU-B'], s['EU-PB'],
       s['NA-P'], s['NA-B'], s['NA-PB'],
-      s['OH'], s['OFF'],
+      s['OH'], s['OFF'], s['VL'],
       s['VL'], s['EL'], s['SL'], s['ML'], s['HOL'], s['CO'],
       s['RTO'], s['TRNG'],
       s.workingDays, s.nightShifts, s.totalHours, s.workloadPct + '%'
@@ -4148,7 +2967,7 @@ function exportCSV() {
              'RTO', 'OFF',
              'AP-P', 'EU-P', 'NA-P',
              'AP-B', 'EU-B', 'NA-B',
-             'OH', 'VL/EL/SL/ML/HOL/CO', 'TRNG']);
+             'OH', 'VL', 'VL/EL/SL/ML/HOL/CO', 'TRNG']);
   const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
   for (const e of EMPLOYEES) {
     const s = firstRow[e] || 'OFF';
@@ -4161,14 +2980,12 @@ function exportCSV() {
       st.RTO || 0, st.OFF || 0,
       st['AP-P'] || 0, st['EU-P'] || 0, st['NA-P'] || 0,
       st['AP-B'] || 0, st['EU-B'] || 0, st['NA-B'] || 0,
-      st.OH || 0, leave,
+      st.OH || 0, st.VL || 0, leave,
       st.TRNG || 0
     ]);
   }
 
-  const csv = '\uFEFF' + rows
-    .map(r => r.map(csvEscape).join(','))
-    .join('\n');
+  const csv = '\uFEFF' + rows.map(r => r.map(csvEscape).join(',')).join('\n');
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -4183,7 +3000,7 @@ function exportCSV() {
   toast('CSV exported');
 }
 
-/* ---- Excel export (xlsx-js-style fork of SheetJS) --------------- */
+/* ---- Excel export ---- */
 
 function isCellTextWhite(hex) {
   if (!hex) return false;
@@ -4279,13 +3096,10 @@ function buildScheduleSheet() {
   const { year, month } = state;
   const totalDays = daysInMonth(year, month);
   const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
-  const fillers = (state.fillerEmployees && state.fillerEmployees.length)
-    ? state.fillerEmployees.join(', ')
-    : '—';
 
   const aoa = [];
-  aoa.push([`${MONTH_NAMES[month]} ${year} — Monthly Schedule  (OH: ${assignMonthlyOH()}  •  Fillers: ${fillers})`, '', ...Array(EMPLOYEES.length).fill('')]);
-  aoa.push(['Date', 'Day', ...EMPLOYEES.map(e => `${e}\n${firstRow[e] || 'OFF'}`)]);
+  aoa.push([`${MONTH_NAMES[month]} ${year} — Monthly Schedule`, '', ...Array(EMPLOYEES.length).fill('')]);
+  aoa.push(['Date', 'Day', ...EMPLOYEES.map(e => `${e}\n${firstRow[e] || ''}`)]);
   for (let d = 1; d <= totalDays; d++) {
     const key = dateKey(year, month, d);
     const dow = DAY_NAMES_SHORT[getDayOfWeek(year, month, d)];
@@ -4299,7 +3113,6 @@ function buildScheduleSheet() {
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-
   ws['!cols'] = [
     { wch: 14 }, { wch: 8 },
     ...EMPLOYEES.map(() => ({ wch: 12 }))
@@ -4324,9 +3137,13 @@ function buildScheduleSheet() {
     if (c <= 1) ws[a].s = stickyHeaderStyle();
     else {
       const emp = EMPLOYEES[c - 2];
-      const pill = (firstRow[emp] || 'OFF');
-      const pillColor = getShiftColorHex(pill);
-      ws[a].s = excelStyleFor(pillColor, { bold: true, wrap: true });
+      const pill = firstRow[emp] || '';
+      if (pill) {
+        const pillColor = getShiftColorHex(pill);
+        ws[a].s = excelStyleFor(pillColor, { bold: true, wrap: true });
+      } else {
+        ws[a].s = stickyHeaderStyle();
+      }
     }
   }
 
@@ -4351,7 +3168,6 @@ function buildScheduleSheet() {
 
   ws['!freeze'] = { xSplit: 2, ySplit: 2 };
   ws['!views'] = [{ state: 'frozen', xSplit: 2, ySplit: 2, topLeftCell: 'C3', activePane: 'bottomRight' }];
-
   return ws;
 }
 
@@ -4361,7 +3177,7 @@ function buildStatsSheet() {
     'Employee', 'AP-P', 'AP-B', 'AP-PB',
     'EU-P', 'EU-B', 'EU-PB',
     'NA-P', 'NA-B', 'NA-PB',
-    'OH', 'FILLER', 'OFF',
+    'OH', 'OFF', 'VL',
     'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
     'RTO', 'TRNG',
     'Working', 'Night', 'Hours', 'Workload %'
@@ -4378,7 +3194,7 @@ function buildStatsSheet() {
       s['AP-P'], s['AP-B'], s['AP-PB'],
       s['EU-P'], s['EU-B'], s['EU-PB'],
       s['NA-P'], s['NA-B'], s['NA-PB'],
-      s['OH'], s['OFF'],
+      s['OH'], s['OFF'], s['VL'],
       s['VL'], s['EL'], s['SL'], s['ML'], s['HOL'], s['CO'],
       s['RTO'], s['TRNG'],
       s.workingDays, s.nightShifts, s.totalHours, s.workloadPct + '%'
@@ -4440,21 +3256,21 @@ function buildMSASheet() {
   const stats = calculateStatistics();
 
   const MSA_COLS = [
-    { key: 'RTO',   label: 'RTO',                     kind: 'cyan'   },
-    { key: 'OFF',   label: 'OFF',                     kind: 'yellow' },
-    { key: 'AP-P',  label: 'AP-P',                    kind: 'green'  },
-    { key: 'EU-P',  label: 'EU-P',                    kind: 'cyan'   },
-    { key: 'NA-P',  label: 'NA-P',                    kind: 'yellow' },
-    { key: 'AP-B',  label: 'AP-B',                    kind: 'red'    },
-    { key: 'EU-B',  label: 'EU-B',                    kind: 'cyan'   },
-    { key: 'NA-B',  label: 'NA-B',                    kind: 'yellow' },
-    { key: 'OH',    label: 'OH',                      kind: 'green'  },
-    { key: 'FILLER',label: 'FILLER',                  kind: 'purple' },
-    { key: 'AP-PB', label: 'AP-PB',                   kind: 'green'  },
-    { key: 'NA-PB', label: 'NA-PB',                   kind: 'yellow' },
-    { key: 'EU-PB', label: 'EU-PB',                   kind: 'cyan'   },
-    { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO',      kind: 'yellow' },
-    { key: 'TRNG',  label: 'TRNG',                    kind: 'purple' }
+    { key: 'RTO',   label: 'RTO',                kind: 'cyan'   },
+    { key: 'OFF',   label: 'OFF',                kind: 'yellow' },
+    { key: 'AP-P',  label: 'AP-P',               kind: 'green'  },
+    { key: 'EU-P',  label: 'EU-P',               kind: 'cyan'   },
+    { key: 'NA-P',  label: 'NA-P',               kind: 'yellow' },
+    { key: 'AP-B',  label: 'AP-B',               kind: 'red'    },
+    { key: 'EU-B',  label: 'EU-B',               kind: 'cyan'   },
+    { key: 'NA-B',  label: 'NA-B',               kind: 'yellow' },
+    { key: 'OH',    label: 'OH',                 kind: 'green'  },
+    { key: 'AP-PB', label: 'AP-PB',              kind: 'green'  },
+    { key: 'NA-PB', label: 'NA-PB',              kind: 'yellow' },
+    { key: 'EU-PB', label: 'EU-PB',              kind: 'cyan'   },
+    { key: 'VL',    label: 'VL (Leave)',         kind: 'red'    },
+    { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO', kind: 'yellow' },
+    { key: 'TRNG',  label: 'TRNG',               kind: 'purple' }
   ];
 
   const valueFor = (emp, key) => {
@@ -4470,7 +3286,7 @@ function buildMSASheet() {
   aoa.push([`Monthly Shift Assignment — ${MONTH_NAMES[state.month]} ${state.year}`]);
   aoa.push(['Shift', 'Description', ...MSA_COLS.map(c => c.label)]);
 
-  if (firstRow && Object.keys(firstRow).length > 0) {
+  if (state.scheduleBuilt && firstRow && Object.keys(firstRow).length > 0) {
     for (const emp of EMPLOYEES) {
       const s = firstRow[emp] || 'OFF';
       const desc = SHIFT_TIMES[s] || '';
@@ -4480,6 +3296,8 @@ function buildMSASheet() {
     const totals = ['Totals', 'All employees',
       ...MSA_COLS.map(c => EMPLOYEES.reduce((t, emp) => t + valueFor(emp, c.key), 0))];
     aoa.push(totals);
+  } else {
+    aoa.push(['(no schedule)', '', ...MSA_COLS.map(() => '')]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -4498,7 +3316,7 @@ function buildMSASheet() {
     ws[a].s = c <= 1 ? stickyHeaderStyle() : headerStyle();
   }
 
-  if (firstRow && Object.keys(firstRow).length > 0) {
+  if (state.scheduleBuilt && firstRow && Object.keys(firstRow).length > 0) {
     for (let r = 2; r < 2 + EMPLOYEES.length; r++) {
       const emp = EMPLOYEES[r - 2];
       const ps = firstRow[emp] || 'OFF';
@@ -4560,74 +3378,15 @@ function exportPDF() {
 }
 
 /* =====================================================================
-   STORAGE
-   ===================================================================== */
-
-function saveSchedule() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (err) {
-    console.warn('LocalStorage save failed', err);
-  }
-}
-
-function loadSchedule() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return false;
-    state = Object.assign(defaultState(), parsed);
-    state.rotationMemory = Object.assign(
-      defaultState().rotationMemory,
-      parsed.rotationMemory || {}
-    );
-    // Backward-compat: older saves had `fillerEmployee` (single). Migrate
-    // it into the new `fillerEmployees` array so the new code paths work.
-    if (!Array.isArray(state.fillerEmployees)) {
-      state.fillerEmployees = [];
-    }
-    if (state.fillerEmployee && !state.fillerEmployees.includes(state.fillerEmployee)) {
-      // Keep the legacy single filler in the array for one month so it
-      // still counts as a designated filler.
-      state.fillerEmployees.push(state.fillerEmployee);
-    }
-    if (typeof state.fillerCount !== 'number') {
-      state.fillerCount = state.fillerEmployees.length >= 2 ? state.fillerEmployees.length : 3;
-    }
-    if (typeof state.cindyOhOverride !== 'boolean') {
-      state.cindyOhOverride = false;
-    }
-    // Same migration for the primary-shifts snapshot in memory
-    if (state.currentPrimaryShifts) {
-      if (!Array.isArray(state.currentPrimaryShifts.fillerEmployees)) {
-        state.currentPrimaryShifts.fillerEmployees = state.currentPrimaryShifts.fillerEmployee
-          ? [state.currentPrimaryShifts.fillerEmployee]
-          : [];
-      }
-    }
-    // And the rotation history entries
-    if (Array.isArray(state.rotationHistory)) {
-      for (const h of state.rotationHistory) {
-        if (!Array.isArray(h.fillerEmployees)) {
-          h.fillerEmployees = h.fillerEmployee ? [h.fillerEmployee] : [];
-        }
-      }
-    }
-    return true;
-  } catch (err) {
-    console.warn('LocalStorage load failed', err);
-    return false;
-  }
-}
-
-/* =====================================================================
    DROPDOWN POPULATION
    ===================================================================== */
 
 function populateMonthYear() {
   const monthSel = document.getElementById('monthSelect');
   const yearSel  = document.getElementById('yearSelect');
+  if (!monthSel || !yearSel) return;
+  monthSel.innerHTML = '';
+  yearSel.innerHTML = '';
   MONTH_NAMES.forEach((m, i) => {
     const opt = document.createElement('option');
     opt.value = i; opt.textContent = m;
@@ -4643,507 +3402,53 @@ function populateMonthYear() {
   yearSel.value = state.year;
 }
 
-function populateRotationControls() {
-  const empSel = document.getElementById('qaEmployee');
-  const patSel = document.getElementById('qaPattern');
-  const swatch = document.getElementById('qaSwatch');
-
+function populateLeaveEmployeeDropdown() {
+  const empSel = document.getElementById('leaveEmployee');
+  if (!empSel) return;
   empSel.innerHTML = '';
-  patSel.innerHTML = '';
-
   EMPLOYEES.forEach(emp => {
     const o = document.createElement('option');
     o.value = emp; o.textContent = emp;
     empSel.appendChild(o);
   });
-  ROTATION_PATTERNS.forEach(p => {
+}
+
+function populateFilterSelects() {
+  const empSel = document.getElementById('filterEmployee');
+  const shiftSel = document.getElementById('filterShift');
+  if (!empSel || !shiftSel) return;
+  empSel.innerHTML = '<option value="">All Employees</option>';
+  EMPLOYEES.forEach(e => {
     const o = document.createElement('option');
-    o.value = p; o.textContent = `${p} — ${SHIFT_TIMES[p] || ''}`;
-    patSel.appendChild(o);
-  });
-  updateQaSwatch();
-}
-
-function updateQaSwatch() {
-  const swatch = document.getElementById('qaSwatch');
-  const patSel = document.getElementById('qaPattern');
-  const code = patSel.value;
-  swatch.style.background = getShiftColorVar(code);
-  swatch.textContent = code;
-  if (code === 'OH' || code === 'RTO') {
-    swatch.style.color = '#0f172a';
-    swatch.style.border = '1px solid var(--border-strong)';
-  } else {
-    swatch.style.color = 'white';
-    swatch.style.border = 'none';
-  }
-}
-
-/* =====================================================================
-   ENSURE SCHEDULE EXISTS FOR THE CURRENT MONTH
-   ===================================================================== */
-
-function ensureScheduleForMonth() {
-  populateLeaveControls();
-  const firstKey = dateKey(state.year, state.month, 1);
-  if (!state.schedule[firstKey]) {
-    // No schedule for this month yet — generate one.
-    generateSchedule();
-  } else {
-    syncPrimaryAssignments();
-    render();
-  }
-}
-
-/* =====================================================================
-   EVENT WIRING
-   ===================================================================== */
-
-/* =====================================================================
-   LEAVE MANAGEMENT — CRUD + UI HANDLERS
-   ---------------------------------------------------------------------
-   Functions:
-     • populateLeaveControls()    — fill employee dropdown + date bounds
-     • renderLeaveTable()         — render the list of leave requests
-     • addOrUpdateLeaveRequest()  — add a new or save an edited entry
-     • editLeaveRequest(id)       — populate the form for editing
-     • deleteLeaveRequest(id)     — remove one entry
-     • clearAllLeaveRequests()    — wipe all entries
-     • setLeaveMode(mode)         — toggle between 'none' / 'with'
-     • validateLeaveRequest(...)  — client-side form validation
-   ===================================================================== */
-
-let _leaveEditingId = null;
-
-function populateLeaveControls() {
-  const empSel = document.getElementById('leaveEmployee');
-  if (!empSel) return;
-  empSel.innerHTML = '';
-  for (const emp of EMPLOYEES) {
-    const o = document.createElement('option');
-    o.value = emp; o.textContent = emp;
+    o.value = e; o.textContent = e;
     empSel.appendChild(o);
-  }
-  // Set date bounds to the current month
-  const { year, month } = state;
-  const first = `${year}-${pad2(month + 1)}-01`;
-  const last  = `${year}-${pad2(month + 1)}-${pad2(daysInMonth(year, month))}`;
-  const s = document.getElementById('leaveStart');
-  const e = document.getElementById('leaveEnd');
-  if (s) { s.min = first; s.max = last; if (!s.value) s.value = first; }
-  if (e) { e.min = first; e.max = last; if (!e.value) e.value = first; }
-}
-
-function renderLeaveTable() {
-  const list = state.leaveRequests || [];
-  const wrap = document.getElementById('leaveTableWrap');
-  const tbody = document.getElementById('leaveTableBody');
-  const actions = document.getElementById('leaveTableActions');
-  const summary = document.getElementById('leaveSummary');
-  if (!tbody) return;
-
-  if (list.length === 0) {
-    wrap.classList.remove('show');
-    if (actions) actions.style.display = 'none';
-    tbody.innerHTML = '';
-    return;
-  }
-
-  wrap.classList.add('show');
-  if (actions) actions.style.display = 'flex';
-
-  if (summary) {
-    const totalDays = list.reduce((sum, lr) => {
-      const s = parseLeaveDate(lr.startDate);
-      const e = parseLeaveDate(lr.endDate);
-      if (!s || !e) return sum;
-      return sum + Math.max(0, (e - s) / 86400000 + 1);
-    }, 0);
-    summary.textContent = `${list.length} leave request${list.length !== 1 ? 's' : ''} · ${totalDays} day${totalDays !== 1 ? 's' : ''} total`;
-  }
-
-  // Sort by start date, then employee
-  const sorted = [...list].sort((a, b) => {
-    if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
-    return a.employee.localeCompare(b.employee);
   });
-
-  tbody.innerHTML = sorted.map(lr => {
-    const s = parseLeaveDate(lr.startDate);
-    const e = parseLeaveDate(lr.endDate);
-    const sStr = s ? `${s.getDate()} ${MONTH_NAMES_SHORT[state.month]} ${s.getFullYear()}` : lr.startDate;
-    const eStr = e ? `${e.getDate()} ${MONTH_NAMES_SHORT[state.month]} ${e.getFullYear()}` : lr.endDate;
-    const dur  = (s && e) ? Math.max(1, Math.round((e - s) / 86400000) + 1) : '?';
-    const typeColor = getShiftColorVar(lr.type);
-    const isEditing = _leaveEditingId === lr.id;
-    return `
-      <tr${isEditing ? ' style="background:var(--hl-selected);"' : ''}>
-        <td><strong>${escapeHtml(lr.employee)}</strong></td>
-        <td><span class="leave-pill" style="background:${typeColor}">${lr.type}</span></td>
-        <td>${sStr}</td>
-        <td>${eStr}</td>
-        <td>${dur} day${dur !== 1 ? 's' : ''}</td>
-        <td>
-          <div class="row-actions">
-            <button class="btn btn-outline" data-action="edit-leave" data-id="${lr.id}" style="padding:5px 10px;font-size:12px;">✎ Edit</button>
-            <button class="btn btn-danger"  data-action="delete-leave" data-id="${lr.id}" style="padding:5px 10px;font-size:12px;">🗑 Delete</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function validateLeaveRequest(employee, type, startDate, endDate) {
-  if (!employee) return 'Please select an employee.';
-  if (!type)      return 'Please choose a leave type.';
-  if (!startDate) return 'Please pick a start date.';
-  if (!endDate)   return 'Please pick an end date.';
-  const s = parseLeaveDate(startDate);
-  const e = parseLeaveDate(endDate);
-  if (!s || !e) return 'Invalid date format.';
-  if (e < s)     return 'End date must be on or after start date.';
-
-  // Check the dates are within the current displayed month
-  const { year, month } = state;
-  if (s.getFullYear() !== year || s.getMonth() !== month) {
-    return 'Leave dates must fall within the currently selected month.';
-  }
-  if (e.getFullYear() !== year || e.getMonth() !== month) {
-    return 'Leave dates must fall within the currently selected month.';
-  }
-
-  // Check for overlap with existing requests for the SAME employee
-  const existing = state.leaveRequests || [];
-  const overlap = existing.find(lr => {
-    if (_leaveEditingId && lr.id === _leaveEditingId) return false;
-    if (lr.employee !== employee) return false;
-    const ls = parseLeaveDate(lr.startDate);
-    const le = parseLeaveDate(lr.endDate);
-    if (!ls || !le) return false;
-    return !(e < ls || s > le); // overlap if !(end < ls || start > le)
-  });
-  if (overlap) {
-    return `Overlaps with existing ${overlap.type} for ${overlap.employee} (${overlap.startDate} → ${overlap.endDate}).`;
-  }
-
-  return null; // valid
-}
-
-function showLeaveValidation(msg, type = 'error') {
-  const el = document.getElementById('leaveValidation');
-  if (!el) return;
-  if (!msg) {
-    el.classList.remove('show', 'error', 'success');
-    el.textContent = '';
-    return;
-  }
-  el.classList.add('show');
-  el.classList.toggle('error',   type === 'error');
-  el.classList.toggle('success', type === 'success');
-  el.textContent = msg;
-}
-
-function addOrUpdateLeaveRequest() {
-  const employee = document.getElementById('leaveEmployee').value;
-  const type     = document.getElementById('leaveType').value;
-  const startDate = document.getElementById('leaveStart').value;
-  const endDate   = document.getElementById('leaveEnd').value;
-
-  const err = validateLeaveRequest(employee, type, startDate, endDate);
-  if (err) {
-    showLeaveValidation(err, 'error');
-    return;
-  }
-
-  if (!Array.isArray(state.leaveRequests)) state.leaveRequests = [];
-
-  if (_leaveEditingId) {
-    // Update existing
-    const idx = state.leaveRequests.findIndex(lr => lr.id === _leaveEditingId);
-    if (idx >= 0) {
-      state.leaveRequests[idx] = { ...state.leaveRequests[idx], employee, type, startDate, endDate };
-      showLeaveValidation(`Updated leave request for ${employee}.`, 'success');
-    }
-    _leaveEditingId = null;
-    const cancelBtn = document.getElementById('btnCancelEditLeave');
-    const addBtn = document.getElementById('btnAddLeave');
-    if (cancelBtn) cancelBtn.style.display = 'none';
-    if (addBtn) addBtn.textContent = '➕ Add Leave';
-  } else {
-    // Add new
-    const id = `lr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    state.leaveRequests.push({ id, employee, type, startDate, endDate });
-    showLeaveValidation(`Added ${type} leave for ${employee}.`, 'success');
-  }
-
-  renderLeaveTable();
-  saveSchedule();
-}
-
-function editLeaveRequest(id) {
-  const lr = (state.leaveRequests || []).find(x => x.id === id);
-  if (!lr) return;
-  document.getElementById('leaveEmployee').value = lr.employee;
-  document.getElementById('leaveType').value     = lr.type;
-  document.getElementById('leaveStart').value    = lr.startDate;
-  document.getElementById('leaveEnd').value      = lr.endDate;
-  _leaveEditingId = id;
-  const cancelBtn = document.getElementById('btnCancelEditLeave');
-  const addBtn = document.getElementById('btnAddLeave');
-  if (cancelBtn) cancelBtn.style.display = 'inline-flex';
-  if (addBtn) addBtn.textContent = '💾 Save Changes';
-  renderLeaveTable();
-  showLeaveValidation(`Editing ${lr.employee}'s ${lr.type} leave. Adjust fields then save.`, 'success');
-}
-
-function deleteLeaveRequest(id) {
-  state.leaveRequests = (state.leaveRequests || []).filter(lr => lr.id !== id);
-  if (_leaveEditingId === id) {
-    _leaveEditingId = null;
-    const cancelBtn = document.getElementById('btnCancelEditLeave');
-    const addBtn = document.getElementById('btnAddLeave');
-    if (cancelBtn) cancelBtn.style.display = 'none';
-    if (addBtn) addBtn.textContent = '➕ Add Leave';
-  }
-  renderLeaveTable();
-  saveSchedule();
-  toast('Leave request removed', 'warn');
-}
-
-function clearAllLeaveRequests() {
-  if (!state.leaveRequests || state.leaveRequests.length === 0) return;
-  state.leaveRequests = [];
-  _leaveEditingId = null;
-  renderLeaveTable();
-  saveSchedule();
-  toast('All leave requests cleared', 'warn');
-}
-
-function setLeaveMode(mode) {
-  state.leaveMode = mode;
-  const btnNone = document.getElementById('leaveToggleNone');
-  const btnWith = document.getElementById('leaveToggleWith');
-  const panel   = document.getElementById('leaveConfigPanel');
-  const hint    = document.getElementById('leaveModeHint');
-  if (btnNone && btnWith) {
-    btnNone.classList.toggle('active', mode === 'none');
-    btnWith.classList.toggle('active', mode === 'with');
-  }
-  if (panel) {
-    panel.style.display = mode === 'with' ? 'block' : 'none';
-  }
-  if (hint) {
-    hint.textContent = mode === 'with'
-      ? 'Configure approved leave requests below. Temporary coverage is created only when a leave request causes a shift to become understaffed.'
-      : 'Standard schedule — every employee keeps one primary shift for the whole month.';
-  }
-  saveSchedule();
-}
-
-function wireEvents() {
-  document.getElementById('monthSelect').addEventListener('change', (e) => {
-    state.month = parseInt(e.target.value, 10);
-    ensureScheduleForMonth();
-    saveSchedule();
-  });
-
-  document.getElementById('yearSelect').addEventListener('change', (e) => {
-    state.year = parseInt(e.target.value, 10);
-    ensureScheduleForMonth();
-    saveSchedule();
-  });
-
-  document.getElementById('btnGenerate').addEventListener('click', async () => {
-    const ok = await confirmModal(
-      'Generate Schedule',
-      'This will rebuild the schedule for the current month. Each day will contain exactly 1 AP-PB, 1 EU-P, 1 EU-B, 1 NA-P, 1 NA-B, 1 OH and 1 OFF, with OFF days distributed fairly across all employees. The monthly OH employee stays the same. Continue?',
-      'Generate', 'primary'
-    );
-    if (ok) {
-      // Generate WITHOUT rotating OH (per spec).
-      generateSchedule();
-      populateRotationControls();
-    }
-  });
-
-  document.getElementById('btnNextMonth').addEventListener('click', async () => {
-    const ok = await confirmModal(
-      'Generate Next Month',
-      'Move forward one month and rotate to the next OH employee. Continue?',
-      'Next Month', 'primary'
-    );
-    if (ok) generateNextMonth();
-  });
-
-  document.getElementById('btnReset').addEventListener('click', async () => {
-    const ok = await confirmModal(
-      'Reset Rotation Memory',
-      'This clears the rotation memory and vacation leaves for the current month and regenerates the schedule. Continue?',
-      'Reset', 'primary'
-    );
-    if (ok) softReset();
-  });
-
-  document.getElementById('btnClearAll').addEventListener('click', async () => {
-    const ok = await confirmModal(
-      'Clear All Data',
-      '⚠ This will COMPLETELY wipe the scheduler — employees, schedule, statistics, monthly shift assignment, rotation memory, and saved browser storage. The app returns to a blank state. Continue?',
-      'Yes, clear everything', 'danger'
-    );
-    if (ok) clearAll();
-  });
-
-  document.getElementById('btnClearEmployee').addEventListener('click', openClearEmployeeModal);
-  document.getElementById('clearEmployeeCancel').addEventListener('click', closeClearEmployeeModal);
-  document.getElementById('clearEmployeeConfirm').addEventListener('click', () => {
-    const select = document.getElementById('clearEmployeeSelect');
-    if (!select) return;
-    const emp = select.value;
-    if (!emp) return;
-    clearEmployeeSchedule(emp);
-    closeClearEmployeeModal();
-  });
-
-  document.getElementById('themeToggle').addEventListener('click', () => {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = state.theme;
-    document.getElementById('themeToggle').textContent = state.theme === 'dark' ? '☀️' : '🌙';
-    saveSchedule();
-  });
-
-  document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
-  document.getElementById('btnExportExcel').addEventListener('click', exportExcel);
-  document.getElementById('btnExportPDF').addEventListener('click', exportPDF);
-  document.getElementById('btnPrint').addEventListener('click', printSchedule);
-
-  document.getElementById('filterEmployee').addEventListener('change', (e) => {
-    filterState.employee = e.target.value;
-    renderScheduleTable();
-    renderMonthlyAssignments();
-  });
-  document.getElementById('filterShift').addEventListener('change', (e) => {
-    filterState.shift = e.target.value;
-    renderScheduleTable();
-  });
-  document.querySelectorAll('.filter-chip').forEach(b => {
-    b.addEventListener('click', () => {
-      filterState.mode = b.dataset.filter;
-      renderScheduleTable();
-    });
-  });
-
-  document.getElementById('scheduleTable').addEventListener('change', onScheduleTableChange);
-
-  document.getElementById('qaPattern').addEventListener('change', updateQaSwatch);
-  document.getElementById('qaApply').addEventListener('click', () => {
-    const emp = document.getElementById('qaEmployee').value;
-    const pat = document.getElementById('qaPattern').value;
-    if (!emp || !pat) return;
-    applyRotationPattern(emp, pat);
-  });
-  document.getElementById('qaClearCell').addEventListener('click', () => {
-    const emp = document.getElementById('qaEmployee').value;
-    if (!emp) return;
-    clearEmployeeRotation(emp);
-  });
-
-  // ===== Filler & OH-Lock Events =====
-  const fillerCountSel = document.getElementById('fillerCountSelect');
-  if (fillerCountSel) {
-    fillerCountSel.value = String(state.fillerCount || 3);
-    fillerCountSel.addEventListener('change', (e) => {
-      const v = parseInt(e.target.value, 10);
-      if (v === 2 || v === 3) {
-        state.fillerCount = v;
-        saveSchedule();
-        toast(`Filler count set to ${v}. Click "Regenerate with New Rules" to apply.`, 'success');
-      }
-    });
-  }
-  const cindyToggle = document.getElementById('cindyOhOverrideToggle');
-  if (cindyToggle) {
-    cindyToggle.checked = !!state.cindyOhOverride;
-    cindyToggle.addEventListener('change', (e) => {
-      state.cindyOhOverride = !!e.target.checked;
-      saveSchedule();
-      toast(
-        state.cindyOhOverride
-          ? 'Cindy Halasan excluded from OH — click "Regenerate with New Rules" to apply.'
-          : 'Cindy OH override disabled — click "Regenerate with New Rules" to apply.',
-        state.cindyOhOverride ? 'success' : 'warn'
-      );
-    });
-  }
-  document.getElementById('btnRegenerateWithFillers').addEventListener('click', async () => {
-    const ok = await confirmModal(
-      'Regenerate with New Rules',
-      `This will rebuild the schedule using:\n  • Filler count: ${state.fillerCount || 3}\n  • Cindy OH override: ${state.cindyOhOverride ? 'ON (Cindy excluded from OH)' : 'OFF'}\n  • Fillers only cover AP-PB / EU-P / EU-B / NA-P / NA-B\n  • Fillers only activate when leave creates a gap\n  • AP-PB is never split into AP-P / AP-B\n\nContinue?`,
-      'Regenerate', 'primary'
-    );
-    if (ok) {
-      // Clear rotation history so the new rules take effect fresh
-      state.rotationHistory = [];
-      generateSchedule();
-    }
-  });
-
-  // ===== Leave Management Events =====
-  document.getElementById('leaveToggleNone').addEventListener('click', () => setLeaveMode('none'));
-  document.getElementById('leaveToggleWith').addEventListener('click', () => setLeaveMode('with'));
-  document.getElementById('btnAddLeave').addEventListener('click', addOrUpdateLeaveRequest);
-  document.getElementById('btnCancelEditLeave').addEventListener('click', () => {
-    _leaveEditingId = null;
-    document.getElementById('btnCancelEditLeave').style.display = 'none';
-    document.getElementById('btnAddLeave').textContent = '➕ Add Leave';
-    showLeaveValidation(null);
-    renderLeaveTable();
-  });
-  document.getElementById('btnClearAllLeaves').addEventListener('click', async () => {
-    if (!state.leaveRequests || state.leaveRequests.length === 0) return;
-    const ok = await confirmModal(
-      'Clear All Leave Requests',
-      `This will remove all ${state.leaveRequests.length} leave request(s) for the current month. Continue?`,
-      'Clear All', 'danger'
-    );
-    if (ok) clearAllLeaveRequests();
-  });
-
-  // Event delegation for edit/delete buttons inside the leave table
-  document.getElementById('leaveTableBody').addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-action]');
-    if (!btn) return;
-    const id = btn.dataset.id;
-    if (btn.dataset.action === 'edit-leave')   editLeaveRequest(id);
-    if (btn.dataset.action === 'delete-leave') deleteLeaveRequest(id);
-  });
-
-  // Auto-update end date when start date is set later
-  document.getElementById('leaveStart').addEventListener('change', (e) => {
-    const startVal = e.target.value;
-    const endInput = document.getElementById('leaveEnd');
-    if (endInput && (!endInput.value || endInput.value < startVal)) {
-      endInput.value = startVal;
-    }
-  });
-
-  // Show inline validation when fields change
-  ['leaveEmployee', 'leaveType', 'leaveStart', 'leaveEnd'].forEach(id => {
-    document.getElementById(id).addEventListener('change', () => showLeaveValidation(null));
+  shiftSel.innerHTML = '<option value="">All Shifts</option>';
+  SHIFT_CODES.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    shiftSel.appendChild(o);
   });
 }
 
 /* =====================================================================
-   INIT
+   APPLICATION LIFECYCLE
    ===================================================================== */
 
-function init() {
-  populateMonthYear();
-  populateRotationControls();
-  populateLeaveControls();
-  setLeaveMode(state.leaveMode || 'none');
+/** Re-load every configuration section into the UI. */
+function loadSavedConfigurations() {
+  loadDayOffConfiguration();
+  loadRotationPattern();
+  loadLeaveRequests();
+}
 
-  const loaded = loadSchedule();
+/** Application entry point. Wires the UI, restores state, renders. */
+function initializeApplication() {
+  populateMonthYear();
+  populateLeaveEmployeeDropdown();
+  populateFilterSelects();
+
+  const loaded = loadFromStorage();
   document.getElementById('monthSelect').value = state.month;
   document.getElementById('yearSelect').value = state.year;
 
@@ -5152,25 +3457,272 @@ function init() {
     document.getElementById('themeToggle').textContent = '☀️';
   }
 
+  loadSavedConfigurations();
   wireEvents();
-  renderLeaveTable();
 
-  // Sync the new Filler & OH-Lock controls with current state
-  const fillerCountSel = document.getElementById('fillerCountSelect');
-  if (fillerCountSel) fillerCountSel.value = String(state.fillerCount || 3);
-  const cindyToggle = document.getElementById('cindyOhOverrideToggle');
-  if (cindyToggle) cindyToggle.checked = !!state.cindyOhOverride;
-
-  if (!loaded || Object.keys(state.schedule).length === 0) {
-    // First-ever open: build a fresh schedule.
-    generateSchedule();
-  } else {
-    syncPrimaryAssignments();
-    render();
-  }
+  renderSchedule();
+  updateDashboard();
+  updateScheduleStatusBanner();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+/* =====================================================================
+   EVENT WIRING
+   ===================================================================== */
+
+function wireEvents() {
+  // Month / year navigation
+  document.getElementById('monthSelect').addEventListener('change', (e) => {
+    state.month = parseInt(e.target.value, 10);
+    state.scheduleBuilt = false; // changing month invalidates the built flag
+    saveToStorage();
+    loadSavedConfigurations();   // updates the leave date bounds
+    renderSchedule();
+    updateDashboard();
+    updateScheduleStatusBanner();
+  });
+
+  document.getElementById('yearSelect').addEventListener('change', (e) => {
+    state.year = parseInt(e.target.value, 10);
+    state.scheduleBuilt = false;
+    saveToStorage();
+    loadSavedConfigurations();
+    renderSchedule();
+    updateDashboard();
+    updateScheduleStatusBanner();
+  });
+
+  document.getElementById('btnPrevMonth').addEventListener('click', () => {
+    let m = state.month - 1;
+    let y = state.year;
+    if (m < 0) { m = 11; y -= 1; }
+    state.month = m;
+    state.year = y;
+    state.scheduleBuilt = false;
+    document.getElementById('monthSelect').value = m;
+    document.getElementById('yearSelect').value = y;
+    saveToStorage();
+    loadSavedConfigurations();
+    renderSchedule();
+    updateDashboard();
+    updateScheduleStatusBanner();
+  });
+
+  document.getElementById('btnNextMonth').addEventListener('click', () => {
+    let m = state.month + 1;
+    let y = state.year;
+    if (m > 11) { m = 0; y += 1; }
+    state.month = m;
+    state.year = y;
+    state.scheduleBuilt = false;
+    document.getElementById('monthSelect').value = m;
+    document.getElementById('yearSelect').value = y;
+    saveToStorage();
+    loadSavedConfigurations();
+    renderSchedule();
+    updateDashboard();
+    updateScheduleStatusBanner();
+  });
+
+  // Create Schedule — reads configurations, never invents data
+  document.getElementById('btnCreateSchedule').addEventListener('click', () => {
+    generateSchedule();
+  });
+
+  // Clear Schedule — wipes only the generated cells, configurations are preserved
+  document.getElementById('btnClearSchedule').addEventListener('click', async () => {
+    if (!state.scheduleBuilt && countScheduleCells() === 0) {
+      toast('Schedule is already empty', 'warn');
+      return;
+    }
+    const ok = await confirmModal(
+      'Clear Schedule',
+      'This will clear the generated schedule. Your day-off, rotation, and leave-request configurations will NOT be erased. Continue?',
+      'Clear Schedule', 'danger'
+    );
+    if (ok) clearSchedule();
+  });
+
+  // Clear All — full reset
+  document.getElementById('btnClearAll').addEventListener('click', async () => {
+    const ok = await confirmModal(
+      'Clear All Data',
+      '⚠ This will COMPLETELY wipe the scheduler — every configuration (day off, rotation, leave) and the generated schedule. The app returns to a blank state. Continue?',
+      'Yes, clear everything', 'danger'
+    );
+    if (ok) clearAll();
+  });
+
+  // Theme toggle
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = state.theme;
+    document.getElementById('themeToggle').textContent = state.theme === 'dark' ? '☀️' : '🌙';
+    saveToStorage();
+  });
+
+  // Exports
+  document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+  document.getElementById('btnExportExcel').addEventListener('click', exportExcel);
+  document.getElementById('btnExportPDF').addEventListener('click', exportPDF);
+  document.getElementById('btnPrint').addEventListener('click', printSchedule);
+
+  // Filters
+  document.getElementById('filterEmployee').addEventListener('change', (e) => {
+    filterState.employee = e.target.value;
+    renderScheduleTable();
+  });
+  document.getElementById('filterShift').addEventListener('change', (e) => {
+    filterState.shift = e.target.value;
+    renderScheduleTable();
+  });
+  document.querySelectorAll('.filter-chip').forEach(b => {
+    b.addEventListener('click', () => {
+      filterState.mode = b.dataset.filter;
+      document.querySelectorAll('.filter-chip').forEach(x =>
+        x.classList.toggle('active', x.dataset.filter === filterState.mode)
+      );
+      renderScheduleTable();
+    });
+  });
+  // Default filter chip
+  document.querySelectorAll('.filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filterState.mode);
+  });
+
+  // Schedule cell change (manual override)
+  document.getElementById('scheduleTable').addEventListener('change', onScheduleTableChange);
+
+  // ===== Module 1: Day Off =====
+  document.getElementById('btnSaveDayOff').addEventListener('click', saveDayOffConfiguration);
+  document.getElementById('btnClearDayOff').addEventListener('click', () => {
+    if (Object.keys(state.dayOffConfig).length === 0) {
+      toast('No day-off configuration to clear', 'warn');
+      return;
+    }
+    showConfigValidation('dayOff', 'All day-off selections cleared. Click Save to apply.', 'success');
+    loadDayOffConfiguration();   // re-render with empty selects
+    state.dayOffConfig = {};
+    saveToStorage();
+    updateDayOffSummary();
+    toast('Day-off configuration cleared', 'warn');
+  });
+
+  // ===== Module 2: Rotation =====
+  document.getElementById('btnSaveRotation').addEventListener('click', saveRotationPattern);
+  document.getElementById('btnClearRotation').addEventListener('click', () => {
+    if (Object.keys(state.rotationPattern).length === 0) {
+      toast('No rotation pattern to clear', 'warn');
+      return;
+    }
+    showConfigValidation('rotation', 'All rotation selections cleared. Click Save to apply.', 'success');
+    state.rotationPattern = {};
+    saveToStorage();
+    loadRotationPattern();
+    updateRotationSummary();
+    toast('Rotation pattern cleared', 'warn');
+  });
+
+  // ===== Module 3: Leave Requests =====
+  document.getElementById('btnAddLeave').addEventListener('click', addOrUpdateLeaveRequest);
+  document.getElementById('btnCancelEditLeave').addEventListener('click', () => {
+    resetLeaveForm();
+    renderLeaveTable();
+  });
+  document.getElementById('btnClearAllLeaves').addEventListener('click', async () => {
+    if (!state.leaveRequests || state.leaveRequests.length === 0) return;
+    const ok = await confirmModal(
+      'Clear All Leave Requests',
+      `This will remove all ${state.leaveRequests.length} leave request(s). Continue?`,
+      'Clear All', 'danger'
+    );
+    if (ok) clearAllLeaveRequests();
+  });
+
+  document.getElementById('leaveTableBody').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (btn.dataset.action === 'edit-leave')   editLeaveRequest(id);
+    if (btn.dataset.action === 'delete-leave') deleteLeaveRequest(id);
+  });
+
+  // Clear inline validation when fields change
+  ['leaveEmployee', 'leaveType', 'leaveDate', 'leaveReason', 'leaveApproved'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => showLeaveValidation(null));
+  });
+}
+
+/* =====================================================================
+   SCHEDULE CELL OVERRIDE
+   ---------------------------------------------------------------------
+   Each cell is a <select> with the full SHIFT_CODES list. Editing a
+   single cell updates state.schedule, persists, and re-renders. This
+   preserves the existing "click to override" affordance.
+   ===================================================================== */
+
+function onScheduleTableChange(e) {
+  const sel = e.target;
+  if (!(sel instanceof HTMLSelectElement)) return;
+  if (!sel.classList.contains('cell-select')) return;
+
+  const emp = sel.dataset.emp;
+  const day = parseInt(sel.dataset.day, 10);
+  const newShift = sel.value;
+  const key = dateKey(state.year, state.month, day);
+
+  if (!state.schedule[key]) state.schedule[key] = {};
+  state.schedule[key][emp] = newShift;
+  state.scheduleBuilt = true;
+
+  // Live update cell color
+  const td = sel.closest('td');
+  if (td) {
+    td.className = shiftClass(newShift);
+    td.classList.add('pulse');
+    setTimeout(() => td.classList.remove('pulse'), 400);
+  }
+
+  saveToStorage();
+  renderStatsTable();
+  renderMonthlyShiftAssignment();
+  updateDashboard();
+  updateScheduleStatusBanner();
+  // Schedule table header pills may change — re-render to update the monthly shift tag
+  renderScheduleTable();
+}
+
+/* =====================================================================
+   HARD RESET
+   ===================================================================== */
+
+function clearAll() {
+  state = defaultState();
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+
+  document.getElementById('monthSelect').value = state.month;
+  document.getElementById('yearSelect').value = state.year;
+  document.documentElement.dataset.theme = state.theme;
+  document.getElementById('themeToggle').textContent = '🌙';
+
+  populateFilterSelects();
+  loadSavedConfigurations();
+  filterState = { employee: '', shift: '', mode: 'all' };
+  document.querySelectorAll('.filter-chip').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === 'all');
+  });
+
+  renderSchedule();
+  updateDashboard();
+  updateScheduleStatusBanner();
+  toast('All data cleared — scheduler reset', 'warn');
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+
+document.addEventListener('DOMContentLoaded', initializeApplication);
 </script>
 </body>
 </html>
