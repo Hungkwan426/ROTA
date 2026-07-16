@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>[DXC] EAO BUR & PF ROTA</title>
+<title>BUR &amp; PF ROTA — Backup and Platforms Monthly Schedule</title>
+<link rel="icon" type="image/png" href="dxc-logo.png" />
 <style>
 /* =====================================================================
    THEME VARIABLES
@@ -11,7 +12,7 @@
 :root {
   --bg: #f3f5f9;
   --bg-card: #ffffff;
-  --bg-header: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+  --bg-header: linear-gradient(135deg, #2e1a6b 0%, #3b1e7a 50%, #4c1d95 100%);
   --text: #0f172a;
   --text-muted: #64748b;
   --border: #e2e8f0;
@@ -45,7 +46,7 @@
   --shift-rto:   #ffffff;   /* white — RTO */
   --shift-off:   #b0b0b0;   /* gray — OFF */
   --shift-ap-p:  #00b050;   /* AP-P → green (working) */
-  --shift-lv:    #f97316;   /* orange — VL (leave override) */
+  --shift-lv:    #f97316;   /* orange — LV (leave override) */
 
   /* Cell tints for Monthly Shift Assignment counts (light mode) */
   --tint-green:   rgba(0, 176, 80, 0.16);
@@ -73,7 +74,7 @@
 [data-theme="dark"] {
   --bg: #0b1220;
   --bg-card: #131c2e;
-  --bg-header: linear-gradient(135deg, #1e1b4b 0%, #581c87 50%, #831843 100%);
+  --bg-header: linear-gradient(135deg, #1e1b4b 0%, #2e1065 50%, #4c1d95 100%);
   --text: #e2e8f0;
   --text-muted: #94a3b8;
   --border: #1e293b;
@@ -186,6 +187,47 @@ a { color: var(--primary); }
   justify-content: center;
   font-size: 20px;
   backdrop-filter: blur(8px);
+}
+
+/* DXC brand logo — sits at the upper-left of the header bar */
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.brand-logo img {
+  display: block;
+  height: 44px;
+  width: auto;
+  max-width: 220px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+/* Brand title block — sits directly to the right of the logo */
+.brand-title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  min-width: 0;
+}
+.brand-title-main {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.brand-title-sub {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.82);
+  margin-top: 4px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .app-title small {
@@ -1293,7 +1335,10 @@ a { color: var(--primary); }
   .app-main { padding: 16px; }
   .app-header { padding: 18px 16px; }
   .header-inner { gap: 12px; }
-  .app-title { font-size: 18px; }
+  .brand-logo img { height: 36px; max-width: 180px; }
+  .brand-title { margin-left: 14px; padding-left: 14px; }
+  .brand-title-main { font-size: 18px; }
+  .brand-title-sub { font-size: 12px; }
   .section { padding: 16px; }
   .dash-card .value { font-size: 22px; }
   .controls-panel { gap: 10px; }
@@ -1306,7 +1351,11 @@ a { color: var(--primary); }
 }
 
 @media (max-width: 600px) {
-  .app-title small { display: none; }
+  .brand-logo img { height: 28px; max-width: 130px; }
+  .brand-title { margin-left: 10px; padding-left: 10px; }
+  .brand-title-main { font-size: 15px; }
+  .brand-title-sub { font-size: 11px; }
+  .brand-title-sub { display: none; }
   .controls-panel { flex-direction: column; align-items: stretch; }
   .control-group {
     width: 100%;
@@ -1371,12 +1420,12 @@ input:focus-visible {
      ================================================================ -->
 <header class="app-header">
   <div class="header-inner">
-    <div class="app-title">
-      <div class="logo">📅</div>
-      <div>
-        BUR & PF ROTA
-        <small>Backup and Platforms Monthly Schedule</small>
-      </div>
+    <a class="brand-logo" href="https://dxc.com" target="_blank" rel="noopener" title="DXC Technology">
+      <img src="dxc-logo.png" alt="DXC Technology" />
+    </a>
+    <div class="brand-title">
+      <div class="brand-title-main">BUR &amp; PF ROTA</div>
+      <div class="brand-title-sub">Backup and Platforms Monthly Schedule</div>
     </div>
     <div class="header-actions">
       <button class="btn btn-primary" id="btnCreateSchedule" title="Build the schedule from saved configurations">🛠 Create Schedule</button>
@@ -1497,7 +1546,7 @@ input:focus-visible {
   <section class="section">
     <div class="section-title">
       <span>🌴 Leave Request</span>
-      <span class="hint">Approved leave overrides all other assignments. Only approved leave is rendered as <strong>VL</strong> in the schedule.</span>
+      <span class="hint">Approved leave overrides all other assignments. Only approved leave is rendered as <strong>LV</strong> in the schedule.</span>
     </div>
 
     <div class="leave-config">
@@ -1528,7 +1577,7 @@ input:focus-visible {
         <label for="leaveApproved">Approved</label>
         <label class="check-row">
           <input type="checkbox" id="leaveApproved" />
-          <span>Approved leave is rendered as VL</span>
+          <span>Approved leave is rendered as LV</span>
         </label>
       </div>
       <div class="leave-actions">
@@ -1601,7 +1650,7 @@ input:focus-visible {
   <section class="section legend-section">
     <div class="section-title">
       <span>🎨 Shift Legend</span>
-      <span class="hint"><span style="color:#00b050">●</span> Working &nbsp; <span style="color:#4f86f7">●</span> EU-P &nbsp; <span style="color:#ff8c2a">●</span> NA-P &nbsp; <span style="color:#b0b0b0">●</span> OFF &nbsp; <span style="color:#f97316">●</span> VL</span>
+      <span class="hint"><span style="color:#00b050">●</span> Working &nbsp; <span style="color:#4f86f7">●</span> EU-P &nbsp; <span style="color:#ff8c2a">●</span> NA-P &nbsp; <span style="color:#b0b0b0">●</span> OFF &nbsp; <span style="color:#f97316">●</span> LV</span>
     </div>
     <div class="legend" id="legend"></div>
   </section>
@@ -1634,13 +1683,13 @@ input:focus-visible {
 
      1. Fixed Day Off Configuration  → recurring 2-day consecutive weekly off
      2. Rotation Pattern              → one default shift per employee
-     3. Leave Request                 → approved leave renders as VL
+     3. Leave Request                 → approved leave renders as LV
 
    There is NO random scheduling, NO balancing, NO auto rotation.
    Pressing "Create Schedule" simply reads the saved configurations
    and populates the calendar with these priority rules:
 
-     Rule 1 — Approved leave      → VL
+     Rule 1 — Approved leave      → LV
      Rule 2 — Recurring weekly off → OFF
      Rule 3 — Default rotation    → saved shift
 
@@ -1676,12 +1725,12 @@ const EMPLOYEES = [
   'Joshua Pitapit'
 ];
 
-/** Shift codes rendered in the schedule. "VL" is the leave override. */
+/** Shift codes rendered in the schedule. "LV" is the leave override. */
 const SHIFT_CODES = [
   'AP-P', 'AP-B', 'AP-PB',
   'EU-P', 'EU-B', 'EU-PB',
   'NA-P', 'NA-B', 'NA-PB',
-  'OH', 'OFF', 'VL',
+  'OH', 'OFF', 'LV',
   'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
   'RTO', 'TRNG'
 ];
@@ -1712,12 +1761,12 @@ const LEAVE_TYPES = [
   { code: 'COL', label: 'Compensatory Off Leave' }
 ];
 
-/** Hours per shift (VL counts as 0 hours but renders in stats). */
+/** Hours per shift (LV counts as 0 hours but renders in stats). */
 const SHIFT_HOURS = {
   'AP-P': 8,  'AP-B': 8,   'AP-PB': 8,
   'EU-P': 8,  'EU-B': 8,   'EU-PB': 8,
   'NA-P': 8,  'NA-B': 8,   'NA-PB': 8,
-  'OH':    8, 'OFF':   0,  'VL':    0,
+  'OH':    8, 'OFF':   0,  'LV':    0,
   'VL': 8, 'EL': 8, 'SL': 8, 'ML': 8, 'HOL': 8, 'CO': 8,
   'RTO': 8, 'TRNG': 8
 };
@@ -1735,7 +1784,7 @@ const SHIFT_TIMES = {
   'NA-PB': '11 PM – 7 AM',
   'OH':    '9 AM – 6 PM',
   'OFF':   'Rest day',
-  'VL':    'Approved Leave',
+  'LV':    'Approved Leave',
   'VL':    'Vacation Leave',
   'EL':    'Emergency Leave',
   'SL':    'Sick Leave',
@@ -1751,7 +1800,7 @@ const SHIFT_BUCKET = {
   'AP-P': 'morning', 'AP-B': 'morning', 'AP-PB': 'morning',
   'EU-P': 'evening', 'EU-B': 'evening', 'EU-PB': 'evening',
   'NA-P': 'night',   'NA-B': 'night',   'NA-PB': 'night',
-  'OH': 'day', 'OFF': 'off', 'VL': 'leave',
+  'OH': 'day', 'OFF': 'off', 'LV': 'leave',
   'VL': 'leave', 'EL': 'leave', 'SL': 'leave',
   'ML': 'leave', 'HOL': 'leave', 'CO': 'leave',
   'RTO': 'day', 'TRNG': 'day'
@@ -2258,7 +2307,7 @@ function clearAllLeaveRequests() {
    Reads the three saved configurations and populates state.schedule.
 
    Priority rules (first match wins, so the order is important):
-     1. Approved leave          → VL
+     1. Approved leave          → LV
      2. Recurring weekly off    → OFF
      3. Default rotation pattern → saved shift
    ===================================================================== */
@@ -2278,7 +2327,7 @@ function generateSchedule() {
     newSchedule[key] = {};
   }
 
-  // ---- Rule 1: Approved leave → VL ----
+  // ---- Rule 1: Approved leave → LV ----
   for (const lr of (state.leaveRequests || [])) {
     if (!lr.approved) continue;
     if (!lr.employee || !lr.date) continue;
@@ -2288,7 +2337,7 @@ function generateSchedule() {
     if (d.getFullYear() !== year || d.getMonth() !== month) continue;
     const key = dateKey(year, month, d.getDate());
     if (newSchedule[key]) {
-      newSchedule[key][lr.employee] = 'VL';
+      newSchedule[key][lr.employee] = 'LV';
     }
   }
 
@@ -2304,7 +2353,7 @@ function generateSchedule() {
       const dow = getDayOfWeek(year, month, d);
       if (dow === startIdx || dow === endIdx) {
         const key = dateKey(year, month, d);
-        // Only assign OFF if VL hasn't already claimed this cell
+        // Only assign OFF if LV hasn't already claimed this cell
         if (!newSchedule[key][emp]) {
           newSchedule[key][emp] = 'OFF';
         }
@@ -2461,7 +2510,7 @@ function getShiftColorVar(code) {
     'NA-PB': 'var(--shift-na-p)',
     'OH':    'var(--shift-oh)',
     'OFF':   'var(--shift-off)',
-    'VL':    'var(--shift-lv)',
+    'LV':    'var(--shift-lv)',
     'VL':    'var(--shift-vl)',
     'EL':    'var(--shift-el)',
     'SL':    'var(--shift-sl)',
@@ -2487,7 +2536,7 @@ function getShiftColorHex(code) {
     'NA-PB': '#ff8c2a',
     'OH':    '#ffffff',
     'OFF':   '#b0b0b0',
-    'VL':    '#f97316',
+    'LV':    '#f97316',
     'VL':    '#bcd9ff',
     'EL':    '#f59e0b',
     'SL':    '#f59e0b',
@@ -2643,7 +2692,7 @@ function emptyStats() {
     'AP-P': 0, 'AP-B': 0, 'AP-PB': 0,
     'EU-P': 0, 'EU-B': 0, 'EU-PB': 0,
     'NA-P': 0, 'NA-B': 0, 'NA-PB': 0,
-    'OH': 0, 'OFF': 0, 'VL': 0,
+    'OH': 0, 'OFF': 0, 'LV': 0,
     'VL': 0, 'EL': 0, 'SL': 0, 'ML': 0, 'HOL': 0, 'CO': 0,
     'RTO': 0, 'TRNG': 0,
     workingDays: 0, nightShifts: 0,
@@ -2690,7 +2739,7 @@ function renderStatsTable() {
     'AP-P', 'AP-B', 'AP-PB',
     'EU-P', 'EU-B', 'EU-PB',
     'NA-P', 'NA-B', 'NA-PB',
-    'OH', 'OFF', 'VL',
+    'OH', 'OFF', 'LV',
     'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
     'RTO', 'TRNG',
     'Working', 'Night', 'Hours', 'Workload %'
@@ -2766,7 +2815,7 @@ function renderMonthlyShiftAssignment() {
     { key: 'AP-PB', label: 'AP-PB',              kind: 'green'  },
     { key: 'NA-PB', label: 'NA-PB',              kind: 'yellow' },
     { key: 'EU-PB', label: 'EU-PB',              kind: 'cyan'   },
-    { key: 'VL',    label: 'VL (Leave)',         kind: 'red'    },
+    { key: 'LV',    label: 'LV (Leave)',         kind: 'red'    },
     { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO', kind: 'yellow' },
     { key: 'TRNG',  label: 'TRNG',               kind: 'purple' }
   ];
@@ -2848,7 +2897,7 @@ function renderLegend() {
   const codes = [
     'AP-P','AP-B','EU-P','EU-B','NA-P','NA-B',
     'AP-PB','EU-PB','NA-PB',
-    'OH','OFF','VL',
+    'OH','OFF','LV',
     'VL','EL','SL','ML','HOL','CO',
     'RTO','TRNG'
   ];
@@ -2940,7 +2989,7 @@ function exportCSV() {
     'Employee', 'AP-P', 'AP-B', 'AP-PB',
     'EU-P', 'EU-B', 'EU-PB',
     'NA-P', 'NA-B', 'NA-PB',
-    'OH', 'OFF', 'VL',
+    'OH', 'OFF', 'LV',
     'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
     'RTO', 'TRNG',
     'Working', 'Night', 'Hours', 'Workload %'
@@ -2954,7 +3003,7 @@ function exportCSV() {
       s['AP-P'], s['AP-B'], s['AP-PB'],
       s['EU-P'], s['EU-B'], s['EU-PB'],
       s['NA-P'], s['NA-B'], s['NA-PB'],
-      s['OH'], s['OFF'], s['VL'],
+      s['OH'], s['OFF'], s['LV'],
       s['VL'], s['EL'], s['SL'], s['ML'], s['HOL'], s['CO'],
       s['RTO'], s['TRNG'],
       s.workingDays, s.nightShifts, s.totalHours, s.workloadPct + '%'
@@ -2967,7 +3016,7 @@ function exportCSV() {
              'RTO', 'OFF',
              'AP-P', 'EU-P', 'NA-P',
              'AP-B', 'EU-B', 'NA-B',
-             'OH', 'VL', 'VL/EL/SL/ML/HOL/CO', 'TRNG']);
+             'OH', 'LV', 'VL/EL/SL/ML/HOL/CO', 'TRNG']);
   const firstRow = computePrimaryAssignmentsFromSchedule(year, month);
   for (const e of EMPLOYEES) {
     const s = firstRow[e] || 'OFF';
@@ -2980,7 +3029,7 @@ function exportCSV() {
       st.RTO || 0, st.OFF || 0,
       st['AP-P'] || 0, st['EU-P'] || 0, st['NA-P'] || 0,
       st['AP-B'] || 0, st['EU-B'] || 0, st['NA-B'] || 0,
-      st.OH || 0, st.VL || 0, leave,
+      st.OH || 0, st.LV || 0, leave,
       st.TRNG || 0
     ]);
   }
@@ -3177,7 +3226,7 @@ function buildStatsSheet() {
     'Employee', 'AP-P', 'AP-B', 'AP-PB',
     'EU-P', 'EU-B', 'EU-PB',
     'NA-P', 'NA-B', 'NA-PB',
-    'OH', 'OFF', 'VL',
+    'OH', 'OFF', 'LV',
     'VL', 'EL', 'SL', 'ML', 'HOL', 'CO',
     'RTO', 'TRNG',
     'Working', 'Night', 'Hours', 'Workload %'
@@ -3194,7 +3243,7 @@ function buildStatsSheet() {
       s['AP-P'], s['AP-B'], s['AP-PB'],
       s['EU-P'], s['EU-B'], s['EU-PB'],
       s['NA-P'], s['NA-B'], s['NA-PB'],
-      s['OH'], s['OFF'], s['VL'],
+      s['OH'], s['OFF'], s['LV'],
       s['VL'], s['EL'], s['SL'], s['ML'], s['HOL'], s['CO'],
       s['RTO'], s['TRNG'],
       s.workingDays, s.nightShifts, s.totalHours, s.workloadPct + '%'
@@ -3268,7 +3317,7 @@ function buildMSASheet() {
     { key: 'AP-PB', label: 'AP-PB',              kind: 'green'  },
     { key: 'NA-PB', label: 'NA-PB',              kind: 'yellow' },
     { key: 'EU-PB', label: 'EU-PB',              kind: 'cyan'   },
-    { key: 'VL',    label: 'VL (Leave)',         kind: 'red'    },
+    { key: 'LV',    label: 'LV (Leave)',         kind: 'red'    },
     { key: 'LEAVE', label: 'VL/EL/SL/ML/HOL/CO', kind: 'yellow' },
     { key: 'TRNG',  label: 'TRNG',               kind: 'purple' }
   ];
